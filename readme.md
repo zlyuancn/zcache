@@ -9,16 +9,16 @@
 # 获得
 `go get -u github.com/zlyuancn/zcache`
 
-# db数据库
+# 支持的db数据库
 + 支持任何数据库, 本模块不关心用户如何加载数据
 
-# 缓存数据库
+# 支持的缓存数据库
 + [任何实现 `cachedb.ICacheDB` 的结构](./core/cachedb.go)
 + [no-cache](./cachedb/no-cache/no-cache.go)
 + [memory-cache](./cachedb/memory-cache/memory-cache.go)
 + [redis](./cachedb/redis-cache/redis-cache.go)
 
-# 编解码器
+# 支持的编解码器
 
 > 开发过程中不需要考虑每个对象的编解码, 可以在初始化时选择一个编解码器, 默认是`MsgPack`
 
