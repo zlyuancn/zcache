@@ -6,7 +6,7 @@
 -------------------------------------------------
 */
 
-package single_flight
+package single_sf
 
 import (
 	"errors"

@@ -6,7 +6,7 @@
 -------------------------------------------------
 */
 
-package single_flight
+package no_sf
 
 import (
 	"github.com/zlyuancn/zcache/core"

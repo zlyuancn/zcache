@@ -16,7 +16,7 @@ import (
 
 	"github.com/zlyuancn/zcache/core"
 	"github.com/zlyuancn/zcache/errs"
-	"github.com/zlyuancn/zcache/single_flight"
+	no_sf "github.com/zlyuancn/zcache/single_flight/no-sf"
 )
 
 type LoaderFn = func(query core.IQuery) (interface{}, error)
@@ -43,7 +43,7 @@ func NewLoader(fn LoaderFn, opts ...Option) core.ILoader {
 		o(l)
 	}
 	if l.sf == nil {
-		l.sf = single_flight.NoSingleFlight()
+		l.sf = no_sf.NoSingleFlight()
 	}
 	return l
 }
