@@ -49,7 +49,7 @@ func NewLoader(fn LoaderFn, opts ...Option) core.ILoader {
 }
 
 func (l *Loader) Load(query core.IQuery, codec core.ICodec) ([]byte, error) {
-	return l.sf.Do(query.GlobalId(), func() ([]byte, error) {
+	return l.sf.Do(query, func(query core.IQuery) ([]byte, error) {
 		result, err := l.do(query)
 		if err != nil {
 			return nil, err

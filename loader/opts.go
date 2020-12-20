@@ -11,9 +11,8 @@ package loader
 import (
 	"time"
 
-	"github.com/zlyuancn/zcache/single_flight"
-
 	"github.com/zlyuancn/zcache/core"
+	no_sf "github.com/zlyuancn/zcache/single_flight/no-sf"
 )
 
 type Option func(l *Loader)
@@ -36,7 +35,7 @@ func WithExpire(ex time.Duration, endEx ...time.Duration) Option {
 func WithSingleFlight(sf core.ISingleFlight) Option {
 	return func(l *Loader) {
 		if sf == nil {
-			sf = single_flight.NoSingleFlight()
+			sf = no_sf.NoSingleFlight()
 		}
 		l.sf = sf
 	}

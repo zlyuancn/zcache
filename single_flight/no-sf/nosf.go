@@ -19,6 +19,6 @@ func NoSingleFlight() core.ISingleFlight {
 	return new(noSingleFlight)
 }
 
-func (*noSingleFlight) Do(globalId uint64, fn func() ([]byte, error)) ([]byte, error) {
-	return fn()
+func (*noSingleFlight) Do(query core.IQuery, fn func(core.IQuery) ([]byte, error)) ([]byte, error) {
+	return fn(query)
 }

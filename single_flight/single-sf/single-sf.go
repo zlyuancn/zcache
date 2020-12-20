@@ -58,15 +58,15 @@ func NewSingleFlight(shardCount ...uint64) *SingleFlight {
 	}
 }
 
-func (m *SingleFlight) Do(globalId uint64, fn func() ([]byte, error)) ([]byte, error) {
-	shard := globalId & m.shardMod
+func (m *SingleFlight) Do(query core.IQuery, fn func(query core.IQuery) ([]byte, error)) ([]byte, error) {
+	shard := query.GlobalId() & m.shardMod
 	mx := m.mxs[shard]
 	wait := m.waits[shard]
 
 	mx.Lock()
 
 	// 来晚了, 等待结果
-	if c, ok := wait[globalId]; ok {
+	if c, ok := wait[query.GlobalId()]; ok {
 		mx.Unlock()
 		c.wg.Wait()
 		return c.v, c.e
@@ -75,16 +75,16 @@ func (m *SingleFlight) Do(globalId uint64, fn func() ([]byte, error)) ([]byte, e
 	// 占位置
 	result := new(waitResult)
 	result.wg.Add(1)
-	wait[globalId] = result
+	wait[query.GlobalId()] = result
 	mx.Unlock()
 
 	// 执行db加载
-	result.v, result.e = fn()
+	result.v, result.e = fn(query)
 	result.wg.Done()
 
 	// 离开
 	mx.Lock()
-	delete(wait, globalId)
+	delete(wait, query.GlobalId())
 	mx.Unlock()
 
 	return result.v, result.e
