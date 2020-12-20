@@ -15,6 +15,7 @@ import (
 	"github.com/zlyuancn/zcache/codec"
 	"github.com/zlyuancn/zcache/core"
 	"github.com/zlyuancn/zcache/logger"
+	no_sf "github.com/zlyuancn/zcache/single_flight/no-sf"
 )
 
 type Option func(c *Cache)
@@ -63,6 +64,16 @@ func WithCodec(c core.ICodec) Option {
 			c = codec.DefaultCodec
 		}
 		cache.codec = c
+	}
+}
+
+// 设置单跑模块
+func WithSingleFlight(sf core.ISingleFlight) Option {
+	return func(c *Cache) {
+		if sf == nil {
+			sf = no_sf.NoSingleFlight()
+		}
+		c.sf = sf
 	}
 }
 

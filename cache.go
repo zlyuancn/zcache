@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/zlyuancn/zcache/cachedb/memory-cache"
+	single_sf "github.com/zlyuancn/zcache/single_flight/single-sf"
 
 	"github.com/zlyuancn/zcache/codec"
 	"github.com/zlyuancn/zcache/core"
@@ -40,6 +41,7 @@ type Cache struct {
 	loaders             map[uint64]core.ILoader // 加载器配置
 	panicOnLoaderExists bool                    // 注册加载器时如果加载器已存在会panic, 设为false会替换旧的加载器
 	mx                  sync.RWMutex            // 对注册的加载器加锁
+	sf                  core.ISingleFlight      // 单跑模块
 
 	log core.ILogger // 日志
 }
@@ -62,6 +64,9 @@ func NewCache(opts ...Option) *Cache {
 
 	if c.cache == nil {
 		c.cache = memory_cache.NewMemoryCache()
+	}
+	if c.sf == nil {
+		c.sf = single_sf.NewSingleFlight()
 	}
 	if c.log == nil {
 		c.log = logger.NoLog()
@@ -123,25 +128,42 @@ func (c *Cache) get(query core.IQuery, a interface{}) error {
 	}
 
 	// 从加载器获取数据
+	bs, err := c.sf.Do(query, c.load)
+	if err != nil {
+		return err
+	}
+
+	return c.unmarshal(bs, a)
+}
+
+// 加载数据并写入缓存
+func (c *Cache) load(query core.IQuery) ([]byte, error) {
+	// 加载数据
 	loader := c.loader(query.Namespace(), query.Key())
 	if loader == nil {
-		return errs.LoaderNotFound
+		return nil, errs.LoaderNotFound
 	}
-	bs, loaderErr := loader.Load(query, c.codec)
-	if loaderErr != nil {
-		return loaderErr
+	result, err := loader.Load(query)
+	if err != nil {
+		return nil, fmt.Errorf("load data error from loader: %s", err)
+	}
+
+	// 编码
+	bs, err := c.codec.Encode(result)
+	if err != nil {
+		return nil, fmt.Errorf("<%T> is can't encode: %s", result, err)
 	}
 
 	// 写入缓存
-	cacheErr = c.cache.Set(query, bs, c.makeExpire(loader.Expire()))
+	cacheErr := c.cache.Set(query, bs, c.makeExpire(loader.Expire()))
 	if cacheErr != nil {
 		cacheErr = fmt.Errorf("write to cache error. query: %s:%s?%s, err: %s", query.Namespace(), query.Key(), query.ArgsText(), cacheErr)
 		if c.directReturnOnCacheFault {
-			return cacheErr
+			return nil, cacheErr
 		}
 		c.log.Error(cacheErr)
 	}
-	return c.unmarshal(bs, a)
+	return bs, nil
 }
 
 // 设置数据到缓存
