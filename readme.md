@@ -2,6 +2,10 @@
 
 ---
 
+# 流程图
+
+![流程图](./assets/flow_chart.png)
+
 # 获得
 `go get -u github.com/zlyuancn/zcache`
 
