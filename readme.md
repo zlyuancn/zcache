@@ -2,6 +2,27 @@
 
 ---
 
+# 示例代码
+
+```go
+cache := zcache.NewCache()
+
+// 注册加载器, 只有相同的 space 和 key 才会在加载数据时使用这个加载器
+cache.RegisterLoader("test", "key", zcache.NewLoader(func(query zcache.IQuery) (interface{}, error) {
+    return "hello", nil
+}))
+
+// 获取数据
+var a string
+_ = cache.Get(zcache.NewQuery("test", "key"), &a) // 接收变量必须传入指针
+
+fmt.Println(a)
+```
+
+# 结构图
+
+![结构图](./assets/struct.png)
+
 # 流程图
 
 ![流程图](./assets/flow_chart.png)
@@ -9,7 +30,7 @@
 # 获得
 `go get -u github.com/zlyuancn/zcache`
 
-# 支持的db数据库
+# 支持的数据库
 + 支持任何数据库, 本模块不关心用户如何加载数据
 
 # 支持的缓存数据库
@@ -65,27 +86,4 @@ BenchmarkRedisCache_10k-20         	   68161	     17536 ns/op
 BenchmarkRedisCache_10k-50         	   75562	     16189 ns/op
 BenchmarkRedisCache_10k-200        	   62276	     18630 ns/op
 BenchmarkRedisCache_10k-500        	   41538	     28168 ns/op
-```
-
-# 示例代码
-
-```go
-// 创建缓存服务
-cache := zcache.NewCache()
-
-// 注册加载器, 只有相同的 space 和 key 才会在加载数据时使用这个加载器
-cache.RegisterLoader("test", "key", zcache.NewLoader(func(query zcache.IQuery) (interface{}, error) {
-    return "hello " + query.ArgsText(), nil
-}))
-
-// 创建查询条件
-q := zcache.NewQuery("test", "key", zcache.WithQueryArgs([]string{"arg1", "arg2"}))
-
-// 创建用户保存结果的变量
-var a string
-
-// 从缓存加载, 如果加载失败会调用加载器, 随后将结果放入缓存中, 最后将数据写入a
-_ = cache.Get(q, &a) // 接收变量必须传入指针
-
-fmt.Println(a)
 ```
