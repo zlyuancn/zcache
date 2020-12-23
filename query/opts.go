@@ -17,6 +17,13 @@ func WithArgs(args interface{}) Option {
 	}
 }
 
+// 主动设置参数解析后的文本
+func WithArgsText(text string) Option {
+	return func(q *Query) {
+		q.argsText = &text
+	}
+}
+
 // 设置元数据
 func WithMeta(meta interface{}) Option {
 	return func(q *Query) {

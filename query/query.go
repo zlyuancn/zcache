@@ -28,7 +28,7 @@ type Query struct {
 	// 全局唯一id
 	globalId uint64
 	// 请求路径, 由 key 和 args 生成
-	argsText string
+	argsText *string
 
 	// 元数据
 	meta interface{}
@@ -51,8 +51,14 @@ func NewQuery(namespace, key string, opts ...Option) core.IQuery {
 		o(q)
 	}
 
-	bs, _ := Marshal(q.args)
-	q.argsText = string(bs)
+	var bs []byte
+	if q.argsText == nil {
+		bs, _ = Marshal(q.args)
+		var s = string(bs)
+		q.argsText = &s
+	} else {
+		bs = []byte(*q.argsText)
+	}
 
 	f := fnv.New64a()
 	_, _ = f.Write([]byte(q.namespace))
@@ -83,5 +89,5 @@ func (q *Query) GlobalId() uint64 {
 	return q.globalId
 }
 func (q *Query) ArgsText() string {
-	return q.argsText
+	return *q.argsText
 }
