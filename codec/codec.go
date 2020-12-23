@@ -15,7 +15,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/vmihailenco/msgpack"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 // 默认的编解码器
@@ -100,14 +100,14 @@ type msgPackCodec struct{}
 func (*msgPackCodec) Encode(a interface{}) ([]byte, error) {
 	var buf bytes.Buffer
 	enc := msgpack.NewEncoder(&buf)
-	enc.UseJSONTag(true) // 如果没有 msgpack 标记, 使用 json 标记
+	enc.SetCustomStructTag("json") // 如果没有 msgpack 标记, 使用 json 标记
 	err := enc.Encode(a)
 	return buf.Bytes(), err
 }
 
 func (*msgPackCodec) Decode(data []byte, a interface{}) error {
 	dec := msgpack.NewDecoder(bytes.NewReader(data))
-	dec.UseJSONTag(true) // 如果没有 msgpack 标记, 使用 json 标记
+	dec.SetCustomStructTag("json") // 如果没有 msgpack 标记, 使用 json 标记
 	err := dec.Decode(a)
 	return err
 }
