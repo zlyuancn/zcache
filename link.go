@@ -21,7 +21,6 @@ var NewLoader = loader.NewLoader
 var (
 	NewQuery          = query.NewQuery // 创建一个查询
 	WithQueryArgs     = query.WithArgs
-	WithQueryArgsText = query.WithArgsText
 	WithQueryMeta     = query.WithMeta
 )
 

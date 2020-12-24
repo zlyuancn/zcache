@@ -13,14 +13,7 @@ type Option func(q *Query)
 // 设置参数
 func WithArgs(args interface{}) Option {
 	return func(q *Query) {
-		q.args = args
-	}
-}
-
-// 主动设置参数解析后的文本
-func WithArgsText(text string) Option {
-	return func(q *Query) {
-		q.argsText = &text
+		q.makeArgs(args)
 	}
 }
 

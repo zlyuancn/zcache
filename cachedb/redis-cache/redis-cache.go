@@ -69,9 +69,9 @@ func (r *redisCache) makeKey(query core.IQuery) string {
 	buff.WriteString(query.Namespace())
 	buff.WriteByte(':')
 	buff.WriteString(query.Key())
-	if query.ArgsText() != "" {
+	if query.Args() != "" {
 		buff.WriteByte(':')
-		buff.WriteString(query.ArgsText())
+		buff.WriteString(query.Args())
 	}
 	return buff.String()
 }
