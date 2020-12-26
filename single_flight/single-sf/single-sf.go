@@ -28,7 +28,7 @@ type waitResult struct {
 var _ core.ISingleFlight = (*SingleFlight)(nil)
 
 type SingleFlight struct {
-	mxs        []*sync.Mutex
+	mxs        []*sync.RWMutex
 	waits      []map[uint64]*waitResult
 	shardCount uint64
 	shardMod   uint64
@@ -39,15 +39,15 @@ func NewSingleFlight(shardCount ...uint64) *SingleFlight {
 	count := ShardCount
 	if len(shardCount) > 0 && shardCount[0] > 0 {
 		count = shardCount[0]
-		if count < 0 || count&(count-1) != 0 {
-			panic(errors.New("shardCount must > 0 and shardCount must power of 2"))
+		if count&(count-1) != 0 {
+			panic(errors.New("shardCount must power of 2"))
 		}
 	}
 
-	mxs := make([]*sync.Mutex, count)
+	mxs := make([]*sync.RWMutex, count)
 	mms := make([]map[uint64]*waitResult, count)
 	for i := uint64(0); i < count; i++ {
-		mxs[i] = new(sync.Mutex)
+		mxs[i] = new(sync.RWMutex)
 		mms[i] = make(map[uint64]*waitResult)
 	}
 	return &SingleFlight{
@@ -63,17 +63,28 @@ func (m *SingleFlight) Do(query core.IQuery, fn func(query core.IQuery) ([]byte,
 	mx := m.mxs[shard]
 	wait := m.waits[shard]
 
-	mx.Lock()
+	mx.RLock()
+	result, ok := wait[query.GlobalId()]
+	mx.RUnlock()
 
 	// 来晚了, 等待结果
-	if c, ok := wait[query.GlobalId()]; ok {
+	if ok {
+		result.wg.Wait()
+		return result.v, result.e
+	}
+
+	mx.Lock()
+
+	// 再检查一下, 因为在拿到锁之前可能被别的进程占了位置
+	result, ok = wait[query.GlobalId()]
+	if ok {
 		mx.Unlock()
-		c.wg.Wait()
-		return c.v, c.e
+		result.wg.Wait()
+		return result.v, result.e
 	}
 
 	// 占位置
-	result := new(waitResult)
+	result = new(waitResult)
 	result.wg.Add(1)
 	wait[query.GlobalId()] = result
 	mx.Unlock()
