@@ -49,6 +49,9 @@ func NewQuery(namespace, key string, opts ...Option) core.IQuery {
 		o(q)
 	}
 
+	if q.globalId == 0 {
+		q.makeArgs(nil)
+	}
 	return q
 }
 
