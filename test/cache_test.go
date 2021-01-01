@@ -10,12 +10,13 @@ package test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"math/rand"
 	"testing"
 	"time"
 
-	rredis "github.com/go-redis/redis"
+	rredis "github.com/go-redis/redis/v8"
 	"github.com/stretchr/testify/require"
 
 	"github.com/zlyuancn/zcache"
@@ -38,7 +39,7 @@ func makeRedisCache() *zcache.Cache {
 		PoolSize:    50,
 		DialTimeout: time.Second * 3,
 	})
-	if err := client.Ping().Err(); err != nil {
+	if err := client.Ping(context.Background()).Err(); err != nil {
 		panic(err)
 	}
 	return zcache.NewCache(

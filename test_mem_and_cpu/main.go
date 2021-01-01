@@ -10,6 +10,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"flag"
 	"log"
 	"math/rand"
@@ -18,7 +19,7 @@ import (
 	"syscall"
 	"time"
 
-	rredis "github.com/go-redis/redis"
+	rredis "github.com/go-redis/redis/v8"
 
 	"github.com/zlyuancn/zcache"
 	memory_cache "github.com/zlyuancn/zcache/cachedb/memory-cache"
@@ -38,7 +39,7 @@ func makeRedisCache(host string, pwd string, db int) *zcache.Cache {
 		PoolSize:    50,
 		DialTimeout: time.Second * 3,
 	})
-	if err := client.Ping().Err(); err != nil {
+	if err := client.Ping(context.Background()).Err(); err != nil {
 		panic(err)
 	}
 

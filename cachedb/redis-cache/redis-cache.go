@@ -10,10 +10,11 @@ package redis_cache
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"time"
 
-	rredis "github.com/go-redis/redis"
+	rredis "github.com/go-redis/redis/v8"
 
 	"github.com/zlyuancn/zcache/core"
 	"github.com/zlyuancn/zcache/errs"
@@ -40,10 +41,10 @@ func (r *redisCache) Set(query core.IQuery, bs []byte, ex time.Duration) error {
 	if ex <= 0 {
 		ex = -1
 	}
-	return r.client.Set(r.makeKey(query), bs, ex).Err()
+	return r.client.Set(context.Background(), r.makeKey(query), bs, ex).Err()
 }
 func (r *redisCache) Get(query core.IQuery) ([]byte, error) {
-	result, err := r.client.Get(r.makeKey(query)).Bytes()
+	result, err := r.client.Get(context.Background(), r.makeKey(query)).Bytes()
 	if err == rredis.Nil {
 		return nil, errs.CacheMiss
 	}
@@ -51,7 +52,7 @@ func (r *redisCache) Get(query core.IQuery) ([]byte, error) {
 }
 
 func (r *redisCache) Del(query core.IQuery) error {
-	err := r.client.Del(r.makeKey(query)).Err()
+	err := r.client.Del(context.Background(), r.makeKey(query)).Err()
 	if err == rredis.Nil {
 		return nil
 	}
