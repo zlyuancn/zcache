@@ -18,9 +18,6 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 )
 
-// 默认的编解码器
-var DefaultCodec = new(msgPackCodec)
-
 // 编解码器
 type ICodec interface {
 	// 编码
@@ -42,6 +39,9 @@ var (
 	// ProtoBuffer
 	ProtoBuffer = new(protoBufferCodec)
 )
+
+// 默认的编解码器
+var DefaultCodec = MsgPack
 
 // 不进行编解码
 type byteCodec struct{}

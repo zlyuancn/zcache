@@ -79,7 +79,9 @@ func (m *memoryCache) Get(query core.IQuery) ([]byte, error) {
 	if !ok {
 		return nil, errs.CacheMiss
 	}
-
+	if v == nil {
+		return nil, nil
+	}
 	return v.([]byte), nil
 }
 

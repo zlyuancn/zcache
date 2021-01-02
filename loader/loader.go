@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/zlyuancn/zcache/core"
-	"github.com/zlyuancn/zcache/errs"
 )
 
 type LoaderFn = func(query core.IQuery) (interface{}, error)
@@ -48,10 +47,7 @@ func (l *Loader) Load(query core.IQuery) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	if result == nil {
-		return nil, errs.DataIsNil
-	}
-	return result, err
+	return result, nil
 }
 
 func (l *Loader) do(query core.IQuery) (result interface{}, err error) {

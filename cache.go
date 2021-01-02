@@ -149,9 +149,9 @@ func (c *Cache) load(query core.IQuery) ([]byte, error) {
 	}
 
 	// 编码
-	bs, err := c.codec.Encode(result)
+	bs, err := c.marshal(result)
 	if err != nil {
-		return nil, fmt.Errorf("<%T> is can't encode: %s", result, err)
+		return nil, err
 	}
 
 	// 写入缓存
@@ -218,6 +218,9 @@ func (c *Cache) DelSpaceWithContext(ctx context.Context, namespace string) error
 
 // 将数据解码到a
 func (c *Cache) marshal(a interface{}) ([]byte, error) {
+	if a == nil {
+		return nil, nil
+	}
 	bs, err := c.codec.Encode(a)
 	if err != nil {
 		return nil, fmt.Errorf("<%T> is can't encode: %s", a, err)
@@ -227,6 +230,9 @@ func (c *Cache) marshal(a interface{}) ([]byte, error) {
 
 // 将数据解码到a
 func (c *Cache) unmarshal(bs []byte, a interface{}) error {
+	if len(bs) == 0 && c.codec != codec.Byte {
+		return errs.DataIsNil
+	}
 	err := c.codec.Decode(bs, a)
 	if err != nil {
 		return fmt.Errorf("can't decode to <%T>: %s", a, err)
