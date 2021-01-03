@@ -84,6 +84,22 @@ func (m *memoryCache) Get(query core.IQuery) ([]byte, error) {
 	}
 	return v.([]byte), nil
 }
+func (m *memoryCache) MGet(queries ...core.IQuery) ([][]byte, []error) {
+	buffs := make([][]byte, len(queries))
+	es := make([]error, len(queries))
+	for i, query := range queries {
+		v, ok := m.bucket(query.Namespace()).Get(m.makeKey(query))
+		if !ok {
+			es[i] = errs.CacheMiss
+			continue
+		}
+
+		if v != nil {
+			buffs[i] = v.([]byte)
+		}
+	}
+	return buffs, es
+}
 
 func (m *memoryCache) Del(queries ...core.IQuery) error {
 	for _, query := range queries {

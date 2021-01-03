@@ -24,6 +24,14 @@ func NoCache() core.ICacheDB { return new(noCache) }
 
 func (*noCache) Set(core.IQuery, []byte, time.Duration) error { return nil }
 func (*noCache) Get(core.IQuery) ([]byte, error)              { return nil, errs.CacheMiss }
+func (*noCache) MGet(queries ...core.IQuery) ([][]byte, []error) {
+	buffs := make([][]byte, len(queries))
+	es := make([]error, len(queries))
+	for i := range es {
+		es[i] = errs.CacheMiss
+	}
+	return buffs, es
+}
 
-func (*noCache) Del(...core.IQuery) error  { return nil }
+func (*noCache) Del(...core.IQuery) error     { return nil }
 func (*noCache) DelNamespace(...string) error { return nil }

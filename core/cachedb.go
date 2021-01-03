@@ -18,6 +18,8 @@ type ICacheDB interface {
 	Set(query IQuery, bs []byte, ex time.Duration) error
 	// 获取一个值
 	Get(query IQuery) ([]byte, error)
+	// 获取多个值, 返回数量一定和请求数量一致
+	MGet(queries ...IQuery) ([][]byte, []error)
 
 	// 删除key
 	Del(queries ...IQuery) error

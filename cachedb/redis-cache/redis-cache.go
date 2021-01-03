@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	rredis "github.com/go-redis/redis/v8"
@@ -49,6 +50,39 @@ func (r *redisCache) Get(query core.IQuery) ([]byte, error) {
 		return nil, errs.CacheMiss
 	}
 	return result, err
+}
+func (r *redisCache) MGet(queries ...core.IQuery) ([][]byte, []error) {
+	buffs := make([][]byte, len(queries))
+	es := make([]error, len(queries))
+
+	keys := make([]string, len(queries))
+	for i, query := range queries {
+		keys[i] = r.makeKey(query)
+	}
+	results, err := r.client.MGet(context.Background(), keys...).Result()
+	if err == nil && len(results) != len(queries) {
+		err = errors.New("cached result is inconsistent with the number of requests")
+	}
+	if err != nil {
+		for i := range es {
+			es[i] = err
+		}
+		return buffs, es
+	}
+
+	for i, result := range results {
+		switch v := result.(type) {
+		case nil:
+			es[i] = errs.CacheMiss
+		case string:
+			buffs[i] = []byte(v)
+		case []byte:
+			buffs[i] = v
+		default:
+			es[i] = fmt.Errorf("Unrecognized result type <%T>", result)
+		}
+	}
+	return buffs, es
 }
 
 func (r *redisCache) Del(queries ...core.IQuery) error {
