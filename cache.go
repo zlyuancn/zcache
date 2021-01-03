@@ -190,29 +190,32 @@ func (c *Cache) SetWithContext(ctx context.Context, query core.IQuery, a interfa
 }
 
 // 删除指定数据
-func (c *Cache) Del(query core.IQuery) error {
-	return c.DelWithContext(nil, query)
+func (c *Cache) Del(queries ...core.IQuery) error {
+	return c.DelWithContext(nil, queries...)
 }
 
 // 删除指定数据
-func (c *Cache) DelWithContext(ctx context.Context, query core.IQuery) (err error) {
+func (c *Cache) DelWithContext(ctx context.Context, queries ...core.IQuery) (err error) {
+	if len(queries) == 0 {
+		return nil
+	}
 	return c.doWithContext(ctx, func() error {
-		return c.cache.Del(query)
+		return c.cache.Del(queries...)
 	})
 }
 
 // 删除命名空间下所有数据
-func (c *Cache) DelNamespace(namespace string) error {
-	return c.DelSpaceWithContext(nil, namespace)
+func (c *Cache) DelNamespace(namespaces ...string) error {
+	return c.DelSpaceWithContext(nil, namespaces...)
 }
 
 // 删除命名空间下所有数据
-func (c *Cache) DelSpaceWithContext(ctx context.Context, namespace string) error {
-	if namespace == "" {
-		panic("namespace is empty")
+func (c *Cache) DelSpaceWithContext(ctx context.Context, namespaces ...string) error {
+	if len(namespaces) == 0 {
+		return nil
 	}
 	return c.doWithContext(ctx, func() error {
-		return c.cache.DelNamespace(namespace)
+		return c.cache.DelNamespace(namespaces...)
 	})
 }
 

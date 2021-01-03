@@ -25,5 +25,5 @@ func NoCache() core.ICacheDB { return new(noCache) }
 func (*noCache) Set(core.IQuery, []byte, time.Duration) error { return nil }
 func (*noCache) Get(core.IQuery) ([]byte, error)              { return nil, errs.CacheMiss }
 
-func (*noCache) Del(core.IQuery) error     { return nil }
-func (*noCache) DelNamespace(string) error { return nil }
+func (*noCache) Del(...core.IQuery) error  { return nil }
+func (*noCache) DelNamespace(...string) error { return nil }

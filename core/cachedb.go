@@ -19,8 +19,8 @@ type ICacheDB interface {
 	// 获取一个值
 	Get(query IQuery) ([]byte, error)
 
-	// 删除一个key
-	Del(query IQuery) error
+	// 删除key
+	Del(queries ...IQuery) error
 	// 删除命名空间
-	DelNamespace(namespace string) error
+	DelNamespace(namespaces ...string) error
 }

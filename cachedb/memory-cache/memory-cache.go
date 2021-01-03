@@ -85,13 +85,17 @@ func (m *memoryCache) Get(query core.IQuery) ([]byte, error) {
 	return v.([]byte), nil
 }
 
-func (m *memoryCache) Del(query core.IQuery) error {
-	m.bucket(query.Namespace()).Delete(m.makeKey(query))
+func (m *memoryCache) Del(queries ...core.IQuery) error {
+	for _, query := range queries {
+		m.bucket(query.Namespace()).Delete(m.makeKey(query))
+	}
 	return nil
 }
-func (m *memoryCache) DelNamespace(namespace string) error {
+func (m *memoryCache) DelNamespace(namespaces ...string) error {
 	m.mx.Lock()
-	delete(m.buckets, namespace)
+	for _, namespace := range namespaces {
+		delete(m.buckets, namespace)
+	}
 	m.mx.Unlock()
 	return nil
 }

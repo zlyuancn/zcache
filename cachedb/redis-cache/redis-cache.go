@@ -51,14 +51,19 @@ func (r *redisCache) Get(query core.IQuery) ([]byte, error) {
 	return result, err
 }
 
-func (r *redisCache) Del(query core.IQuery) error {
-	err := r.client.Del(context.Background(), r.makeKey(query)).Err()
+func (r *redisCache) Del(queries ...core.IQuery) error {
+	keys := make([]string, len(queries))
+	for i, query := range queries {
+		keys[i] = r.makeKey(query)
+	}
+
+	err := r.client.Del(context.Background(), keys...).Err()
 	if err == rredis.Nil {
 		return nil
 	}
 	return err
 }
-func (r *redisCache) DelNamespace(namespace string) error {
+func (r *redisCache) DelNamespace(namespaces ...string) error {
 	return errors.New("del namespace is un implement")
 }
 
