@@ -20,6 +20,7 @@ import (
 
 	"github.com/zlyuancn/zcache/cachedb/memory-cache"
 	single_sf "github.com/zlyuancn/zcache/single_flight/single-sf"
+	"github.com/zlyuancn/zcache/wrap_call"
 
 	"github.com/zlyuancn/zcache/codec"
 	"github.com/zlyuancn/zcache/core"
@@ -271,33 +272,36 @@ func (c *Cache) writeBuffsToArray(buffs [][]byte, arrayType reflect.Type, arrayV
 }
 
 // 加载数据并写入缓存
-func (c *Cache) load(query core.IQuery) ([]byte, error) {
-	// 加载数据
-	loader := c.loader(query.Namespace(), query.Key())
-	if loader == nil {
-		return nil, errs.LoaderNotFound
-	}
-	result, err := loader.Load(query)
-	if err != nil {
-		return nil, fmt.Errorf("load data error from loader: %s", err)
-	}
-
-	// 编码
-	bs, err := c.marshal(result)
-	if err != nil {
-		return nil, err
-	}
-
-	// 写入缓存
-	cacheErr := c.cache.Set(query, bs, c.makeExpire(loader.Expire()))
-	if cacheErr != nil {
-		cacheErr = fmt.Errorf("write to cache error. query: %s:%s?%s, err: %s", query.Namespace(), query.Key(), query.Args(), cacheErr)
-		if c.directReturnOnCacheFault {
-			return nil, cacheErr
+func (c *Cache) load(query core.IQuery) (bs []byte, err error) {
+	err = wrap_call.WrapCall(func() error {
+		// 加载数据
+		loader := c.loader(query.Namespace(), query.Key())
+		if loader == nil {
+			return errs.LoaderNotFound
 		}
-		c.log.Error(cacheErr)
-	}
-	return bs, nil
+		result, err := loader.Load(query)
+		if err != nil {
+			return fmt.Errorf("load data error from loader: %s", err)
+		}
+
+		// 编码
+		bs, err = c.marshal(result)
+		if err != nil {
+			return err
+		}
+
+		// 写入缓存
+		cacheErr := c.cache.Set(query, bs, c.makeExpire(loader.Expire()))
+		if cacheErr != nil {
+			cacheErr = fmt.Errorf("write to cache error. query: %s:%s?%s, err: %s", query.Namespace(), query.Key(), query.Args(), cacheErr)
+			if c.directReturnOnCacheFault {
+				return cacheErr
+			}
+			c.log.Error(cacheErr)
+		}
+		return nil
+	})
+	return bs, err
 }
 
 // 设置数据到缓存
@@ -389,12 +393,12 @@ func (c *Cache) makeLoaderId(namespace, key string) uint64 {
 // 为一个执行添加上下文
 func (c *Cache) doWithContext(ctx context.Context, fn func() error) (err error) {
 	if ctx == nil || ctx == context.Background() || ctx == context.TODO() {
-		return fn()
+		return wrap_call.WrapCall(fn)
 	}
 
 	done := make(chan struct{}, 1)
 	go func() {
-		err = fn()
+		err = wrap_call.WrapCall(fn)
 		done <- struct{}{}
 	}()
 

@@ -10,7 +10,6 @@ package loader
 
 import (
 	"errors"
-	"fmt"
 	"math/rand"
 	"time"
 
@@ -43,31 +42,11 @@ func NewLoader(fn LoaderFn, opts ...Option) core.ILoader {
 }
 
 func (l *Loader) Load(query core.IQuery) (interface{}, error) {
-	result, err := l.do(query)
+	result, err := l.fn(query)
 	if err != nil {
 		return nil, err
 	}
 	return result, nil
-}
-
-func (l *Loader) do(query core.IQuery) (result interface{}, err error) {
-	defer func() {
-		e := recover()
-		if e == nil {
-			return
-		}
-		switch v := e.(type) {
-		case error:
-			err = v
-		case string:
-			err = errors.New(v)
-		default:
-			err = errors.New(fmt.Sprint(err))
-		}
-	}()
-
-	result, err = l.fn(query)
-	return
 }
 
 func (l *Loader) Expire() (ex time.Duration) {
