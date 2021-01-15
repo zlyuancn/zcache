@@ -150,13 +150,31 @@ func (c *Cache) MGetWithContext(ctx context.Context, queries []core.IQuery, a in
 	})
 }
 func (c *Cache) mGet(queries []core.IQuery, a interface{}) error {
-	if len(queries) == 0 {
+	realQueries := queries
+	if len(realQueries) == 0 {
 		return nil
 	}
 
+	// 过滤重复的query
+	queryMap := make(map[uint64]core.IQuery, len(realQueries))
+	for _, q := range realQueries {
+		queryMap[q.GlobalId()] = q
+	}
+
+	var isFilter bool // 是否进行了过滤
+
+	// 如果有重复的, 必然map和slice的长度不一致
+	if len(queryMap) != len(realQueries) {
+		isFilter = true
+		realQueries = make([]core.IQuery, 0, len(queryMap))
+		for _, q := range queryMap {
+			realQueries = append(realQueries, q)
+		}
+	}
+
 	// 批量从缓存获取数据
-	buffs, cacheErrs := c.cache.MGet(queries...)
-	if len(buffs) != len(queries) || len(cacheErrs) != len(queries) {
+	buffs, cacheErrs := c.cache.MGet(realQueries...)
+	if len(buffs) != len(realQueries) || len(cacheErrs) != len(realQueries) {
 		panic("cached result is inconsistent with the number of requests")
 	}
 
@@ -166,8 +184,8 @@ func (c *Cache) mGet(queries []core.IQuery, a interface{}) error {
 			continue
 		}
 
+		query := realQueries[i]
 		if cacheErr != errs.CacheMiss { // 非缓存未命中错误
-			query := queries[i]
 			cacheErr = fmt.Errorf("load from cache error, The data will be fetched from the loader. query: %s:%s?%s, err: %s", query.Namespace(), query.Key(), query.Args(), cacheErr)
 			if c.directReturnOnCacheFault { // 直接报告错误
 				return cacheErr
@@ -176,7 +194,7 @@ func (c *Cache) mGet(queries []core.IQuery, a interface{}) error {
 		}
 
 		// 从加载器获取数据
-		bs, err := c.sf.Do(queries[i], c.load)
+		bs, err := c.sf.Do(query, c.load)
 		if err != nil {
 			return err
 		}
@@ -184,7 +202,22 @@ func (c *Cache) mGet(queries []core.IQuery, a interface{}) error {
 		buffs[i] = bs
 	}
 
-	return c.writeBuffsTo(buffs, a)
+	// 如果没有进行过滤, 顺序和数量是不变的
+	if !isFilter {
+		return c.writeBuffsTo(buffs, a)
+	}
+
+	// 分发
+	idMap := make(map[uint64]int, len(realQueries))
+	for index, q := range realQueries {
+		idMap[q.GlobalId()] = index
+	}
+	realBuffs := make([][]byte, len(queries))
+	for i, q := range queries {
+		realBuffs[i] = buffs[idMap[q.GlobalId()]]
+	}
+
+	return c.writeBuffsTo(realBuffs, a)
 }
 
 // 将批量获取的数据写入a中
