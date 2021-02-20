@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/zlyuancn/zcache/cachedb/memory-cache"
+	"github.com/zlyuancn/zcache/query"
 	single_sf "github.com/zlyuancn/zcache/single_flight/single-sf"
 	"github.com/zlyuancn/zcache/wrap_call"
 
@@ -136,6 +137,19 @@ func (c *Cache) get(query core.IQuery, a interface{}) error {
 	}
 
 	return c.unmarshal(bs, a)
+}
+
+// 获取数据
+func (c *Cache) Query(namespace, key string, a interface{}, opts ...query.Option) error {
+	return c.QueryWithContext(nil, namespace, key, a, opts...)
+}
+
+// 获取数据
+func (c *Cache) QueryWithContext(ctx context.Context, namespace, key string, a interface{}, opts ...query.Option) error {
+	q := NewQuery(namespace, key, opts...)
+	return c.doWithContext(ctx, func() error {
+		return c.get(q, a)
+	})
 }
 
 // 批量获取, a必须是长度为0的切片指针或长度等于请求数的数组指针
