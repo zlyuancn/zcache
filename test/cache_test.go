@@ -167,9 +167,6 @@ func testMemoryCacheDelNamespace(t *testing.T, cache *zcache.Cache) {
 		err = cache.Get(q, &result)
 		require.NoError(t, err)
 		require.Equal(t, result, expect)
-
-		err = cache.Del(q)
-		require.NoError(t, err)
 	}
 
 	err := cache.DelNamespace(namespace)
