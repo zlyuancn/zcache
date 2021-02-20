@@ -7,14 +7,13 @@
 ```go
 cache := zcache.NewCache()
 
-// 注册加载器, 只有相同的 space 和 key 才会在加载数据时使用这个加载器
+// 注册加载器, 只有相同的 namespace 和 key 才会在加载数据时使用这个加载器
 cache.RegisterLoader("test", "key", zcache.NewLoader(func(query zcache.IQuery) (interface{}, error) {
     return "hello", nil
 }))
 
-// 获取数据
 var a string
-_ = cache.Get(zcache.NewQuery("test", "key"), &a) // 接收变量必须传入指针
+_ = cache.Query("test", "key", &a) // 获取数据, 接收变量必须传入指针
 
 fmt.Println(a)
 ```
@@ -73,7 +72,7 @@ fmt.Println(a)
 go test -v -run "^$" -bench "^Benchmark.+$" -cpu 8,20,50,200,500 .
 ```
 
-# 10 000 个key, 每个key 512字节随机数据, 请求key顺序随机
+## 10 000 个key, 每个key 512字节随机数据, 请求key顺序随机
 
 ```text
 CPU: 4c8t 3.7GHz
@@ -89,3 +88,8 @@ BenchmarkRedisCache_10k-50         	   75562	     16189 ns/op
 BenchmarkRedisCache_10k-200        	   62276	     18630 ns/op
 BenchmarkRedisCache_10k-500        	   41538	     28168 ns/op
 ```
+
+# 示例
+
+[传送门](./example)
+
