@@ -97,8 +97,15 @@ func (r *redisCache) Del(queries ...core.IQuery) error {
 	}
 	return err
 }
+
 func (r *redisCache) DelNamespace(namespaces ...string) error {
-	return errors.New("del namespace is un implement")
+	for _, namespace := range namespaces {
+		key := r.keyPrefix + namespace + ":*"
+		if err := r.scanDelKey(key); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *redisCache) makeKey(query core.IQuery) string {
