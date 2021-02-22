@@ -123,10 +123,11 @@ func (c *Cache) get(query core.IQuery, a interface{}) error {
 		return c.unmarshal(bs, a)
 	}
 	if cacheErr != errs.CacheMiss { // 非缓存未命中错误
-		cacheErr = fmt.Errorf("load from cache error, The data will be fetched from the loader. query: %s:%s?%s, err: %s", query.Namespace(), query.Key(), query.Args(), cacheErr)
 		if c.directReturnOnCacheFault { // 直接报告错误
+			cacheErr = fmt.Errorf("load from cache error. query: %s:%s?%s, err: %s", query.Namespace(), query.Key(), query.Args(), cacheErr)
 			return cacheErr
 		}
+		cacheErr = fmt.Errorf("load from cache error, The data will be fetched from the loader. query: %s:%s?%s, err: %s", query.Namespace(), query.Key(), query.Args(), cacheErr)
 		c.log.Error(cacheErr)
 	}
 
