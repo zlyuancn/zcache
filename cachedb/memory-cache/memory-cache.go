@@ -127,3 +127,15 @@ func (m *memoryCache) makeKey(query core.IQuery) string {
 	buff.WriteString(query.Args())
 	return buff.String()
 }
+
+func (m *memoryCache) Close() error {
+	m.mx.Lock()
+	buckets := m.buckets
+	m.buckets = make(map[string]*go_cache.Cache)
+	m.mx.Unlock()
+
+	for _, bucket := range buckets {
+		bucket.Flush()
+	}
+	return nil
+}

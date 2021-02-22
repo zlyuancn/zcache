@@ -25,4 +25,7 @@ type ICacheDB interface {
 	Del(queries ...IQuery) error
 	// 删除命名空间
 	DelNamespace(namespaces ...string) error
+
+	// 关闭
+	Close() error
 }

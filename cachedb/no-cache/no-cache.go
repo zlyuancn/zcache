@@ -35,3 +35,4 @@ func (*noCache) MGet(queries ...core.IQuery) ([][]byte, []error) {
 
 func (*noCache) Del(...core.IQuery) error     { return nil }
 func (*noCache) DelNamespace(...string) error { return nil }
+func (*noCache) Close() error                 { return nil }

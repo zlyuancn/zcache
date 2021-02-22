@@ -86,21 +86,21 @@ func (c *Cache) RegisterLoader(namespace, key string, loader core.ILoader) {
 		panic(errors.New("key is empty"))
 	}
 
-	loader_id := c.makeLoaderId(namespace, key)
+	loaderId := c.makeLoaderId(namespace, key)
 	c.mx.Lock()
-	if c.loaders[loader_id] != nil && c.panicOnLoaderExists {
+	if c.loaders[loaderId] != nil && c.panicOnLoaderExists {
 		c.mx.Unlock()
 		panic("loader is exists")
 	}
-	c.loaders[loader_id] = loader
+	c.loaders[loaderId] = loader
 	c.mx.Unlock()
 }
 
 // 获取加载器
 func (c *Cache) loader(namespace, key string) core.ILoader {
-	loader_id := c.makeLoaderId(namespace, key)
+	loaderId := c.makeLoaderId(namespace, key)
 	c.mx.RLock()
-	loader := c.loaders[loader_id]
+	loader := c.loaders[loaderId]
 	c.mx.RUnlock()
 	return loader
 }
@@ -198,18 +198,18 @@ func (c *Cache) mGet(queries []core.IQuery, a interface{}) error {
 			continue
 		}
 
-		query := realQueries[i]
+		q := realQueries[i]
 		if cacheErr != errs.CacheMiss { // 非缓存未命中错误
 			if c.directReturnOnCacheFault { // 直接报告错误
-				cacheErr = fmt.Errorf("load from cache error. query: %s:%s?%s, err: %s", query.Namespace(), query.Key(), query.Args(), cacheErr)
+				cacheErr = fmt.Errorf("load from cache error. query: %s:%s?%s, err: %s", q.Namespace(), q.Key(), q.Args(), cacheErr)
 				return cacheErr
 			}
-			cacheErr = fmt.Errorf("load from cache error, The data will be fetched from the loader. query: %s:%s?%s, err: %s", query.Namespace(), query.Key(), query.Args(), cacheErr)
+			cacheErr = fmt.Errorf("load from cache error, The data will be fetched from the loader. query: %s:%s?%s, err: %s", q.Namespace(), q.Key(), q.Args(), cacheErr)
 			c.log.Error(cacheErr)
 		}
 
 		// 从加载器获取数据
-		bs, err := c.sf.Do(query, c.load)
+		bs, err := c.sf.Do(q, c.load)
 		if err != nil {
 			return err
 		}
@@ -467,4 +467,9 @@ func (c *Cache) makeExpire(ex ...time.Duration) time.Duration {
 		return time.Duration(rand.Int63())%(c.endEx-c.startEx) + (c.startEx)
 	}
 	return c.startEx
+}
+
+// 关闭
+func (c *Cache) Close() error {
+	return c.cache.Close()
 }

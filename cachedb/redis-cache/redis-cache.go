@@ -122,3 +122,7 @@ func (r *redisCache) makeKey(query core.IQuery) string {
 	}
 	return buff.String()
 }
+
+func (r *redisCache) Close() error {
+	return r.client.Close()
+}

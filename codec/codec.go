@@ -18,14 +18,6 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 )
 
-// 编解码器
-type ICodec interface {
-	// 编码
-	Encode(i interface{}) ([]byte, error)
-	// 解码
-	Decode(data []byte, i interface{}) error
-}
-
 // 已注册的编解码器
 var (
 	// 不进行编解码, 编码解码都直接返回原始数据, 原始数据必须为[]byte或*[]byte或string或
