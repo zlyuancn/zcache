@@ -173,7 +173,7 @@ func (c *Cache) load(query core.IQuery) (bs []byte, err error) {
 		// 加载数据
 		result, err := l.Load(query)
 		if err != nil {
-			return fmt.Errorf("load data error from loader: %s", err)
+			return fmt.Errorf("load data error from loader. query: %s:%s?%s, err: %s", query.Namespace(), query.Key(), query.ArgsText(), err)
 		}
 
 		// 编码
