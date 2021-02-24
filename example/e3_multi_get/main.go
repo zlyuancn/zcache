@@ -17,7 +17,7 @@ import (
 func main() {
 	cache := zcache.NewCache()
 	cache.RegisterLoader("test", "key", zcache.NewLoader(func(query zcache.IQuery) (interface{}, error) {
-		return "hello" + query.Args(), nil // 返回 hello + 查询的参数
+		return "hello" + query.ArgsText(), nil // 返回 hello + 查询的参数
 	}))
 
 	// 提供多个请求参数进行批量获取

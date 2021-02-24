@@ -22,8 +22,10 @@ type Query struct {
 	namespace string
 	// 查询key
 	key string
-	// 查询参数
-	args string
+	// 参数
+	args interface{}
+	// 查询参数文本, 根据args生成
+	argsText string
 
 	// 全局唯一id
 	globalId uint64
@@ -49,15 +51,13 @@ func NewQuery(namespace, key string, opts ...Option) core.IQuery {
 		o(q)
 	}
 
-	if q.globalId == 0 {
-		q.makeArgs(nil)
-	}
+	q.makeArgsText()
 	return q
 }
 
-func (q *Query) makeArgs(args interface{}) {
-	bs, _ := Marshal(args)
-	q.args = string(bs)
+func (q *Query) makeArgsText() {
+	bs, _ := Marshal(q.args)
+	q.argsText = string(bs)
 
 	f := fnv.New64a()
 	_, _ = f.Write([]byte(q.namespace))
@@ -76,8 +76,11 @@ func (q *Query) Namespace() string {
 func (q *Query) Key() string {
 	return q.key
 }
-func (q *Query) Args() string {
+func (q *Query) Args() interface{} {
 	return q.args
+}
+func (q *Query) ArgsText() string {
+	return q.argsText
 }
 func (q *Query) Meta() interface{} {
 	return q.meta

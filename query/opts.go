@@ -13,7 +13,7 @@ type Option func(q *Query)
 // 设置参数
 func WithArgs(args interface{}) Option {
 	return func(q *Query) {
-		q.makeArgs(args)
+		q.args = args
 	}
 }
 

@@ -117,14 +117,14 @@ func (m *memoryCache) DelNamespace(namespaces ...string) error {
 }
 
 func (m *memoryCache) makeKey(query core.IQuery) string {
-	if query.Args() == "" {
+	if query.ArgsText() == "" {
 		return query.Key()
 	}
 
 	var buff bytes.Buffer
 	buff.WriteString(query.Key())
 	buff.WriteByte('?')
-	buff.WriteString(query.Args())
+	buff.WriteString(query.ArgsText())
 	return buff.String()
 }
 

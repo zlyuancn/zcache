@@ -94,9 +94,6 @@ func Marshal(a interface{}) ([]byte, error) {
 		}
 		buff.WriteByte('}')
 		return buff.Bytes(), nil
-	case reflect.Map:
-		return jsoniter.ConfigCompatibleWithStandardLibrary.Marshal(a)
-	default:
-		return jsoniter.Marshal(a)
 	}
+	return jsoniter.ConfigCompatibleWithStandardLibrary.Marshal(a)
 }

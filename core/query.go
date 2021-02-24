@@ -14,8 +14,10 @@ type IQuery interface {
 	Namespace() string
 	// key, 不能为空, 在缓存未命中时, 用于决定使用哪个加载器
 	Key() string
-	// 参数, 用于在缓存未命中时, 将Args传入加载器以查询数据
-	Args() string
+	// 参数
+	Args() interface{}
+	// 参数文本, 用于在缓存未命中时, 将Args传入加载器以查询数据, 这个文本是由Args()生成的
+	ArgsText() string
 	// 获取元数据
 	Meta() interface{}
 

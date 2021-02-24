@@ -124,10 +124,10 @@ func (c *Cache) get(query core.IQuery, a interface{}) error {
 	}
 	if cacheErr != errs.CacheMiss { // 非缓存未命中错误
 		if c.directReturnOnCacheFault { // 直接报告错误
-			cacheErr = fmt.Errorf("load from cache error. query: %s:%s?%s, err: %s", query.Namespace(), query.Key(), query.Args(), cacheErr)
+			cacheErr = fmt.Errorf("load from cache error. query: %s:%s?%s, err: %s", query.Namespace(), query.Key(), query.ArgsText(), cacheErr)
 			return cacheErr
 		}
-		cacheErr = fmt.Errorf("load from cache error, The data will be fetched from the loader. query: %s:%s?%s, err: %s", query.Namespace(), query.Key(), query.Args(), cacheErr)
+		cacheErr = fmt.Errorf("load from cache error, The data will be fetched from the loader. query: %s:%s?%s, err: %s", query.Namespace(), query.Key(), query.ArgsText(), cacheErr)
 		c.log.Error(cacheErr)
 	}
 
@@ -202,10 +202,10 @@ func (c *Cache) mGet(queries []core.IQuery, a interface{}) error {
 		q := realQueries[i]
 		if cacheErr != errs.CacheMiss { // 非缓存未命中错误
 			if c.directReturnOnCacheFault { // 直接报告错误
-				cacheErr = fmt.Errorf("load from cache error. query: %s:%s?%s, err: %s", q.Namespace(), q.Key(), q.Args(), cacheErr)
+				cacheErr = fmt.Errorf("load from cache error. query: %s:%s?%s, err: %s", q.Namespace(), q.Key(), q.ArgsText(), cacheErr)
 				return cacheErr
 			}
-			cacheErr = fmt.Errorf("load from cache error, The data will be fetched from the loader. query: %s:%s?%s, err: %s", q.Namespace(), q.Key(), q.Args(), cacheErr)
+			cacheErr = fmt.Errorf("load from cache error, The data will be fetched from the loader. query: %s:%s?%s, err: %s", q.Namespace(), q.Key(), q.ArgsText(), cacheErr)
 			c.log.Error(cacheErr)
 		}
 
@@ -342,7 +342,7 @@ func (c *Cache) load(query core.IQuery) (bs []byte, err error) {
 		// 写入缓存
 		cacheErr := c.cache.Set(query, bs, c.makeExpire(loader.Expire()))
 		if cacheErr != nil {
-			cacheErr = fmt.Errorf("write to cache error. query: %s:%s?%s, err: %s", query.Namespace(), query.Key(), query.Args(), cacheErr)
+			cacheErr = fmt.Errorf("write to cache error. query: %s:%s?%s, err: %s", query.Namespace(), query.Key(), query.ArgsText(), cacheErr)
 			if c.directReturnOnCacheFault {
 				return cacheErr
 			}
@@ -370,7 +370,7 @@ func (c *Cache) SetWithContext(ctx context.Context, query core.IQuery, a interfa
 
 		err = c.cache.Set(query, bs, c.makeExpire(ex...))
 		if err != nil {
-			return fmt.Errorf("write to cache error, query: %s:%s?%s, err: %s", query.Namespace(), query.Key(), query.Args(), err)
+			return fmt.Errorf("write to cache error, query: %s:%s?%s, err: %s", query.Namespace(), query.Key(), query.ArgsText(), err)
 		}
 		return nil
 	})
