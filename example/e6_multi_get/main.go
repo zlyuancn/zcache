@@ -21,16 +21,16 @@ func main() {
 		return "hello" + query.ArgsText(), nil // 返回 hello + 查询的参数
 	})
 
-	var results []string // 批量获取结果的接收变量必须是切片或等同于请求数量的数组
+	var results []string // 批量获取结果的接收变量必须是长度为0的切片或长度等于请求数的数组
 
 	// 提供多个请求参数进行批量获取, 如果有重复的query我们会进行优化
-	_ = cache.MGet([]zcache.IQuery{
-		zcache.NewQuery("test", "key", zcache.WithQueryArgs("world1")),
-		zcache.NewQuery("test", "key", zcache.WithQueryArgs("world2")),
-		zcache.NewQuery("test", "key", zcache.WithQueryArgs("world3")),
+	_ = cache.MQuery("test", "key", &results, // 保存结果的变量必须是指针
+		zcache.NewQueryConfig().Args("world1"),
+		zcache.NewQueryConfig().Args("world2"),
+		zcache.NewQueryConfig().Args("world3"),
 		// 这里出现了重复的query, 我们在从缓存或加载器加载数据时会过滤掉这个query, 然后在返回数据给调用者时会将它按顺序返回
-		zcache.NewQuery("test", "key", zcache.WithQueryArgs("world1")),
-	}, &results)
+		zcache.NewQueryConfig().Args("world1"),
+	)
 
 	fmt.Println(results)
 }

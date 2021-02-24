@@ -8,7 +8,7 @@
 cache := zcache.NewCache() // 初始化示例
 
 var a string
-_ = cache.Query("test", "key", &a, // 获取数据, 接收变量必须传入指针
+_ = cache.Query("test", "key", &a, // 获取数据, 保存结果的变量必须是指针
     // 为query设置查询加载函数, 缓存无数据时执行这个加载函数加载数据, 加载的数据会自动存入缓存
     zcache.WithQueryLoaderFn(func (query core.IQuery) (interface{}, error) {
         // 在这里写入你的db逻辑
