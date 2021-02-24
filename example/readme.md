@@ -3,4 +3,4 @@
 + [加载器](./e3_loader/main.go)
 + [元数据](./e4_meta_data/main.go)
 + [过期时间](./e5_expire/main.go)
-+ [批量获取](./e6_multi_get/main.go)
++ [批量获取](./e6_multi_query/main.go)
