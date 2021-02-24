@@ -110,7 +110,7 @@ func (c *Cache) mQuery(queries []core.IQuery, a interface{}) error {
 
 	// 如果没有进行过滤, 顺序和数量是不变的
 	if !isFilter {
-		return c.writeBuffsTo(buffs, a)
+		return c.writeBuffsTo(queries, buffs, a)
 	}
 
 	// 分发
@@ -123,11 +123,11 @@ func (c *Cache) mQuery(queries []core.IQuery, a interface{}) error {
 		realBuffs[i] = buffs[idMap[q.GlobalId()]]
 	}
 
-	return c.writeBuffsTo(realBuffs, a)
+	return c.writeBuffsTo(queries, realBuffs, a)
 }
 
 // 将批量获取的数据写入a中
-func (c *Cache) writeBuffsTo(buffs [][]byte, a interface{}) error {
+func (c *Cache) writeBuffsTo(queries []core.IQuery, buffs [][]byte, a interface{}) error {
 	// 检查输出
 	rt := reflect.TypeOf(a)
 	if rt.Kind() != reflect.Ptr {
@@ -140,16 +140,16 @@ func (c *Cache) writeBuffsTo(buffs [][]byte, a interface{}) error {
 	case reflect.Invalid:
 		panic(errors.New("A is invalid, it may not be initialized"))
 	case reflect.Slice:
-		return c.writeBuffsToSlice(buffs, rt, rv)
+		return c.writeBuffsToSlice(queries, buffs, rt, rv)
 	case reflect.Array:
-		return c.writeBuffsToArray(buffs, rt, rv)
+		return c.writeBuffsToArray(queries, buffs, rt, rv)
 	default:
 		panic(errors.New("A must be a slice pointer of length 0 or an array pointer of length equal to the number of requests"))
 	}
 }
 
 // 将批量获取的数据写入切片中
-func (c *Cache) writeBuffsToSlice(buffs [][]byte, sliceType reflect.Type, sliceValue reflect.Value) (err error) {
+func (c *Cache) writeBuffsToSlice(queries []core.IQuery, buffs [][]byte, sliceType reflect.Type, sliceValue reflect.Value) (err error) {
 	if sliceValue.Kind() == reflect.Invalid {
 		panic(errors.New("A is invalid"))
 	}
@@ -167,7 +167,8 @@ func (c *Cache) writeBuffsToSlice(buffs [][]byte, sliceType reflect.Type, sliceV
 	for i, bs := range buffs {
 		child := reflect.New(itemType) // 创建一个相同类型的指针
 		if err = c.unmarshal(bs, child.Interface()); err != nil {
-			return err
+			q := queries[i]
+			return fmt.Errorf("unmarshal error. query: %s:%s?%s, err: %s", q.Namespace(), q.Key(), q.ArgsText(), err)
 		}
 
 		if !itemIsPtr {
@@ -182,7 +183,7 @@ func (c *Cache) writeBuffsToSlice(buffs [][]byte, sliceType reflect.Type, sliceV
 }
 
 // 将批量获取的数据写入数组中
-func (c *Cache) writeBuffsToArray(buffs [][]byte, arrayType reflect.Type, arrayValue reflect.Value) (err error) {
+func (c *Cache) writeBuffsToArray(queries []core.IQuery, buffs [][]byte, arrayType reflect.Type, arrayValue reflect.Value) (err error) {
 	if arrayValue.Kind() == reflect.Invalid {
 		panic(errors.New("A is invalid"))
 	}
@@ -199,7 +200,8 @@ func (c *Cache) writeBuffsToArray(buffs [][]byte, arrayType reflect.Type, arrayV
 	for i, bs := range buffs {
 		child := reflect.New(itemType) // 创建一个相同类型的指针
 		if err = c.unmarshal(bs, child.Interface()); err != nil {
-			return err
+			q := queries[i]
+			return fmt.Errorf("unmarshal error. query: %s:%s?%s, err: %s", q.Namespace(), q.Key(), q.ArgsText(), err)
 		}
 
 		if !itemIsPtr {
