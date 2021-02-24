@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/zlyuancn/zcache/cachedb/memory-cache"
+	"github.com/zlyuancn/zcache/loader"
 	"github.com/zlyuancn/zcache/query"
 	single_sf "github.com/zlyuancn/zcache/single_flight/single-sf"
 	"github.com/zlyuancn/zcache/wrap_call"
@@ -96,8 +97,14 @@ func (c *Cache) RegisterLoader(namespace, key string, loader core.ILoader) {
 	c.mx.Unlock()
 }
 
+// 注册加载函数, 效果等同于注册加载器
+func (c *Cache) RegisterLoaderFn(namespace, key string, fn loader.LoaderFn, opts ...loader.Option) {
+	l := loader.NewLoader(fn, opts...)
+	c.RegisterLoader(namespace, key, l)
+}
+
 // 获取加载器
-func (c *Cache) loader(namespace, key string) core.ILoader {
+func (c *Cache) getLoader(namespace, key string) core.ILoader {
 	loaderId := c.makeLoaderId(namespace, key)
 	c.mx.RLock()
 	loader := c.loaders[loaderId]
@@ -153,7 +160,9 @@ func (c *Cache) QueryWithContext(ctx context.Context, namespace, key string, a i
 	})
 }
 
-// 批量获取, a必须是长度为0的切片指针或长度等于请求数的数组指针
+// 批量获取, a必须是长度为0的切片指针或长度等于请求数的数组指针.
+//
+// 如果有重复的query我们会进行优化, 在从缓存或加载器加载数据时会过滤掉这个query, 然后在返回数据给调用者时会将它按顺序返回
 func (c *Cache) MGet(queries []core.IQuery, a interface{}) error {
 	return c.MGetWithContext(nil, queries, a)
 }
@@ -323,12 +332,16 @@ func (c *Cache) writeBuffsToArray(buffs [][]byte, arrayType reflect.Type, arrayV
 // 加载数据并写入缓存
 func (c *Cache) load(query core.IQuery) (bs []byte, err error) {
 	err = wrap_call.WrapCall(func() error {
-		// 加载数据
-		loader := c.loader(query.Namespace(), query.Key())
-		if loader == nil {
+		// 获取加载器
+		l := query.Loader() // 查询加载器的优先级高于注册表的加载器
+		if l == nil {
+			l = c.getLoader(query.Namespace(), query.Key()) // 没有查询加载器时从注册表中获取加载器
+		}
+		if l == nil {
 			return errs.LoaderNotFound
 		}
-		result, err := loader.Load(query)
+		// 加载数据
+		result, err := l.Load(query)
 		if err != nil {
 			return fmt.Errorf("load data error from loader: %s", err)
 		}
@@ -340,7 +353,7 @@ func (c *Cache) load(query core.IQuery) (bs []byte, err error) {
 		}
 
 		// 写入缓存
-		cacheErr := c.cache.Set(query, bs, c.makeExpire(loader.Expire()))
+		cacheErr := c.cache.Set(query, bs, c.makeExpire(l.Expire()))
 		if cacheErr != nil {
 			cacheErr = fmt.Errorf("write to cache error. query: %s:%s?%s, err: %s", query.Namespace(), query.Key(), query.ArgsText(), cacheErr)
 			if c.directReturnOnCacheFault {

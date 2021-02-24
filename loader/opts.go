@@ -14,7 +14,7 @@ import (
 
 type Option func(l *Loader)
 
-// 设置过期时间
+// 设置数据过期时间
 //
 // 如果 endEx > 0 且 ex > 0, 则过期时间在 [ex, endEx-1] 区间随机
 // 如果 ex < 0, 则永不过期

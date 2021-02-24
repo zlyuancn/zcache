@@ -16,10 +16,10 @@ import (
 
 func main() {
 	cache := zcache.NewCache()
-	cache.RegisterLoader("test", "key", zcache.NewLoader(func(query zcache.IQuery) (interface{}, error) {
+	cache.RegisterLoaderFn("test", "key", func(query zcache.IQuery) (interface{}, error) {
 		fmt.Println(query.GlobalId(), "重新加载", query.Meta())
 		return "hello", nil // 返回 hello + 查询的参数
-	}))
+	})
 
 	// 创建三个请求参数
 	q1 := zcache.NewQuery("test", "key", zcache.WithQueryMeta("world"))

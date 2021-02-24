@@ -23,4 +23,7 @@ type IQuery interface {
 
 	// 全局唯一id, 用于定位一条数据
 	GlobalId() uint64
+
+	// 查询加载器, 无数据时优先使用这个加载器
+	Loader() ILoader
 }

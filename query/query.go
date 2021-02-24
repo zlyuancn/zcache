@@ -32,6 +32,8 @@ type Query struct {
 
 	// 元数据
 	meta interface{}
+
+	loader core.ILoader
 }
 
 // 创建一个查询
@@ -88,4 +90,8 @@ func (q *Query) Meta() interface{} {
 
 func (q *Query) GlobalId() uint64 {
 	return q.globalId
+}
+
+func (q *Query) Loader() core.ILoader {
+	return q.loader
 }

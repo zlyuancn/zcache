@@ -5,15 +5,16 @@
 # 示例代码
 
 ```go
-cache := zcache.NewCache()
-
-// 注册加载器, 只有相同的 namespace 和 key 才会在加载数据时使用这个加载器
-cache.RegisterLoader("test", "key", zcache.NewLoader(func(query zcache.IQuery) (interface{}, error) {
-    return "hello", nil
-}))
+cache := zcache.NewCache() // 初始化示例
 
 var a string
-_ = cache.Query("test", "key", &a) // 获取数据, 接收变量必须传入指针
+_ = cache.Query("test", "key", &a, // 获取数据, 接收变量必须传入指针
+    // 为query设置查询加载函数, 缓存无数据时执行这个加载函数加载数据, 加载的数据会自动存入缓存
+    zcache.WithQueryLoaderFn(func (query core.IQuery) (interface{}, error) {
+        // 在这里写入你的db逻辑
+        return "hello", nil
+    }),
+)
 
 fmt.Println(a)
 ```
@@ -27,12 +28,15 @@ fmt.Println(a)
 ![流程图](./assets/flow_chart.png)
 
 # 获得
+
 `go get -u github.com/zlyuancn/zcache`
 
 # 支持的数据库
+
 + 支持任何数据库, 本模块不关心用户如何加载数据
 
 # 支持的缓存数据库
+
 + [任何实现 `cachedb.ICacheDB` 的结构](./core/cachedb.go)
 + [no-cache](./cachedb/no-cache/no-cache.go)
 + [memory-cache](./cachedb/memory-cache/memory-cache.go)
