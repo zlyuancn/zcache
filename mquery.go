@@ -37,23 +37,6 @@ func (c *Cache) MQueryWithContext(ctx context.Context, namespace, key string, a 
 	})
 }
 
-// 批量获取, a必须是长度为0的切片指针或长度等于请求数的数组指针.
-//
-// 如果有重复的query我们会进行优化, 在从缓存或加载器加载数据时会过滤掉这个query, 然后在返回数据给调用者时会将它按顺序返回
-//
-// deprecated 使用 MQuery
-func (c *Cache) MGet(queries []core.IQuery, a interface{}) error {
-	return c.MGetWithContext(nil, queries, a)
-}
-
-// 批量获取, a必须是长度为0的切片指针或长度等于请求数的数组指针
-//
-// deprecated 使用 MQueryWithContext
-func (c *Cache) MGetWithContext(ctx context.Context, queries []core.IQuery, a interface{}) error {
-	return c.doWithContext(ctx, func() error {
-		return c.mQuery(queries, a)
-	})
-}
 func (c *Cache) mQuery(queries []core.IQuery, a interface{}) error {
 	realQueries := queries
 	if len(realQueries) == 0 {
