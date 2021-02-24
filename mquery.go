@@ -23,8 +23,9 @@ func (c *Cache) MQuery(namespace, key string, a interface{}, config ...*QueryCon
 	return c.MQueryWithContext(nil, namespace, key, a, config...)
 }
 
-// 批量获取, a必须是长度为0的切片指针或长度等于请求数的数组指针.
+// 批量获取, a必须是长度为0的切片指针或长度等于请求数的数组指针
 //
+// QueryConfig 的 namespace 和 key 会被替换为这个方法的 namespace 和 key
 // 如果有重复的query我们会进行优化, 在从缓存或加载器加载数据时会过滤掉这个query, 然后在返回数据给调用者时会将它按顺序返回
 func (c *Cache) MQueryWithContext(ctx context.Context, namespace, key string, a interface{}, config ...*QueryConfig) error {
 	queries := make([]core.IQuery, len(config))
