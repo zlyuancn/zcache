@@ -18,10 +18,8 @@ import (
 var _ core.IQuery = (*Query)(nil)
 
 type Query struct {
-	// 空间名
-	namespace string
-	// 查询key
-	key string
+	// 桶名
+	bucket string
 	// 参数
 	args interface{}
 	// 查询参数文本, 根据args生成
@@ -37,17 +35,13 @@ type Query struct {
 }
 
 // 创建一个查询
-func NewQuery(namespace, key string, opts ...Option) core.IQuery {
-	if namespace == "" {
-		panic(errors.New("namespace is empty"))
-	}
-	if key == "" {
-		panic(errors.New("key is empty"))
+func NewQuery(bucket string, opts ...Option) core.IQuery {
+	if bucket == "" {
+		panic(errors.New("bucket name is empty"))
 	}
 
 	q := &Query{
-		namespace: namespace,
-		key:       key,
+		bucket: bucket,
 	}
 	for _, o := range opts {
 		o(q)
@@ -62,9 +56,7 @@ func (q *Query) makeArgsText() {
 	q.argsText = string(bs)
 
 	f := fnv.New64a()
-	_, _ = f.Write([]byte(q.namespace))
-	_, _ = f.Write([]byte{':'})
-	_, _ = f.Write([]byte(q.key))
+	_, _ = f.Write([]byte(q.bucket))
 	if len(bs) > 0 {
 		_, _ = f.Write([]byte{'?'})
 		_, _ = f.Write(bs)
@@ -72,11 +64,8 @@ func (q *Query) makeArgsText() {
 	q.globalId = f.Sum64()
 }
 
-func (q *Query) Namespace() string {
-	return q.namespace
-}
-func (q *Query) Key() string {
-	return q.key
+func (q *Query) Bucket() string {
+	return q.bucket
 }
 func (q *Query) Args() interface{} {
 	return q.args

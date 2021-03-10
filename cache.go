@@ -12,14 +12,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"hash/fnv"
 	"math/rand"
 	"sync"
 	"time"
 
 	"github.com/zlyuancn/zcache/cachedb/memory-cache"
 	"github.com/zlyuancn/zcache/loader"
-	"github.com/zlyuancn/zcache/query"
 	single_sf "github.com/zlyuancn/zcache/single_flight/single-sf"
 	"github.com/zlyuancn/zcache/wrap_call"
 
@@ -30,20 +28,22 @@ import (
 )
 
 const (
+	// 默认是否在缓存错误时直接返回
 	defaultDirectReturnOnCacheFault = true
-	defaultPanicOnLoaderExists      = true
+	// 默认是否在注册时检测到加载器存在时panic
+	defaultPanicOnLoaderExists = true
 )
 
 type Cache struct {
 	cache                    core.ICacheDB // 缓存数据库
-	startEx, endEx           time.Duration // 默认过期时间
+	defaultExpire, maxExpire time.Duration // 默认过期时间
 	directReturnOnCacheFault bool          // 在缓存故障时直接返回
 
 	codec core.ICodec // 编解码器
 
-	loaders             map[uint64]core.ILoader // 加载器配置
+	loaders             map[string]core.ILoader // 加载器注册表
 	panicOnLoaderExists bool                    // 注册加载器时如果加载器已存在会panic, 设为false会替换旧的加载器
-	mx                  sync.RWMutex            // 对注册的加载器加锁
+	loaderLock          sync.RWMutex            // 加载器的锁
 	sf                  core.ISingleFlight      // 单跑模块
 
 	log core.ILogger // 日志
@@ -51,13 +51,11 @@ type Cache struct {
 
 func NewCache(opts ...Option) *Cache {
 	c := &Cache{
-		startEx:                  0,
-		endEx:                    0,
 		directReturnOnCacheFault: defaultDirectReturnOnCacheFault,
 
 		codec: codec.DefaultCodec,
 
-		loaders:             make(map[uint64]core.ILoader),
+		loaders:             make(map[string]core.ILoader),
 		panicOnLoaderExists: defaultPanicOnLoaderExists,
 	}
 
@@ -78,122 +76,24 @@ func NewCache(opts ...Option) *Cache {
 }
 
 // 注册加载器
-func (c *Cache) RegisterLoader(namespace, key string, loader core.ILoader) {
-	if namespace == "" {
-		panic(errors.New("namespace is empty"))
-	}
-	if key == "" {
-		panic(errors.New("key is empty"))
+func (c *Cache) RegisterLoader(bucket string, loader core.ILoader) {
+	if bucket == "" {
+		panic(errors.New("bucket name is empty"))
 	}
 
-	loaderId := c.makeLoaderId(namespace, key)
-	c.mx.Lock()
-	if c.loaders[loaderId] != nil && c.panicOnLoaderExists {
-		c.mx.Unlock()
+	c.loaderLock.Lock()
+	if c.loaders[bucket] != nil && c.panicOnLoaderExists {
+		c.loaderLock.Unlock()
 		panic("loader is exists")
 	}
-	c.loaders[loaderId] = loader
-	c.mx.Unlock()
+	c.loaders[bucket] = loader
+	c.loaderLock.Unlock()
 }
 
 // 注册加载函数, 效果等同于注册加载器
-func (c *Cache) RegisterLoaderFn(namespace, key string, fn loader.LoaderFn, opts ...loader.Option) {
+func (c *Cache) RegisterLoaderFn(bucket string, fn loader.LoaderFn, opts ...loader.Option) {
 	l := loader.NewLoader(fn, opts...)
-	c.RegisterLoader(namespace, key, l)
-}
-
-// 获取加载器
-func (c *Cache) getLoader(namespace, key string) core.ILoader {
-	loaderId := c.makeLoaderId(namespace, key)
-	c.mx.RLock()
-	loader := c.loaders[loaderId]
-	c.mx.RUnlock()
-	return loader
-}
-
-// 获取数据
-func (c *Cache) Get(query core.IQuery, a interface{}) error {
-	return c.GetWithContext(nil, query, a)
-}
-
-// 获取数据
-func (c *Cache) GetWithContext(ctx context.Context, query core.IQuery, a interface{}) error {
-	return c.doWithContext(ctx, func() error {
-		return c.get(query, a)
-	})
-}
-func (c *Cache) get(query core.IQuery, a interface{}) error {
-	// 从缓存获取数据
-	bs, cacheErr := c.cache.Get(query)
-	if cacheErr == nil {
-		return c.unmarshal(bs, a)
-	}
-	if cacheErr != errs.CacheMiss { // 非缓存未命中错误
-		if c.directReturnOnCacheFault { // 直接报告错误
-			cacheErr = fmt.Errorf("load from cache error. query: %s:%s?%s, err: %s", query.Namespace(), query.Key(), query.ArgsText(), cacheErr)
-			return cacheErr
-		}
-		cacheErr = fmt.Errorf("load from cache error, The data will be fetched from the loader. query: %s:%s?%s, err: %s", query.Namespace(), query.Key(), query.ArgsText(), cacheErr)
-		c.log.Error(cacheErr)
-	}
-
-	// 从加载器获取数据
-	bs, err := c.sf.Do(query, c.load)
-	if err != nil {
-		return err
-	}
-
-	return c.unmarshal(bs, a)
-}
-
-// 获取数据
-func (c *Cache) Query(namespace, key string, a interface{}, opts ...query.Option) error {
-	return c.QueryWithContext(nil, namespace, key, a, opts...)
-}
-
-// 获取数据
-func (c *Cache) QueryWithContext(ctx context.Context, namespace, key string, a interface{}, opts ...query.Option) error {
-	q := NewQuery(namespace, key, opts...)
-	return c.doWithContext(ctx, func() error {
-		return c.get(q, a)
-	})
-}
-
-// 加载数据并写入缓存
-func (c *Cache) load(query core.IQuery) (bs []byte, err error) {
-	err = wrap_call.WrapCall(func() error {
-		// 获取加载器
-		l := query.Loader() // 查询加载器的优先级高于注册表的加载器
-		if l == nil {
-			l = c.getLoader(query.Namespace(), query.Key()) // 没有查询加载器时从注册表中获取加载器
-		}
-		if l == nil {
-			return errs.LoaderNotFound
-		}
-		// 加载数据
-		result, err := l.Load(query)
-		if err != nil {
-			return fmt.Errorf("load data error from loader. query: %s:%s?%s, err: %s", query.Namespace(), query.Key(), query.ArgsText(), err)
-		}
-
-		// 编码
-		bs, err = c.marshal(result)
-		if err != nil {
-			return err
-		}
-
-		// 写入缓存
-		cacheErr := c.cache.Set(query, bs, c.makeExpire(l.Expire()))
-		if cacheErr != nil {
-			cacheErr = fmt.Errorf("write to cache error. query: %s:%s?%s, err: %s", query.Namespace(), query.Key(), query.ArgsText(), cacheErr)
-			if c.directReturnOnCacheFault {
-				return cacheErr
-			}
-			c.log.Error(cacheErr)
-		}
-		return nil
-	})
-	return bs, err
+	c.RegisterLoader(bucket, l)
 }
 
 // 设置数据到缓存
@@ -213,7 +113,7 @@ func (c *Cache) SetWithContext(ctx context.Context, query core.IQuery, a interfa
 
 		err = c.cache.Set(query, bs, c.makeExpire(ex...))
 		if err != nil {
-			return fmt.Errorf("write to cache error, query: %s:%s?%s, err: %s", query.Namespace(), query.Key(), query.ArgsText(), err)
+			return fmt.Errorf("write to cache error, query: %s, args:%s, err: %s", query.Bucket(), query.ArgsText(), err)
 		}
 		return nil
 	})
@@ -235,17 +135,17 @@ func (c *Cache) DelWithContext(ctx context.Context, queries ...core.IQuery) (err
 }
 
 // 删除命名空间下所有数据
-func (c *Cache) DelNamespace(namespaces ...string) error {
-	return c.DelSpaceWithContext(nil, namespaces...)
+func (c *Cache) DelBucket(buckets ...string) error {
+	return c.DelBucketWithContext(nil, buckets...)
 }
 
 // 删除命名空间下所有数据
-func (c *Cache) DelSpaceWithContext(ctx context.Context, namespaces ...string) error {
-	if len(namespaces) == 0 {
+func (c *Cache) DelBucketWithContext(ctx context.Context, buckets ...string) error {
+	if len(buckets) == 0 {
 		return nil
 	}
 	return c.doWithContext(ctx, func() error {
-		return c.cache.DelNamespace(namespaces...)
+		return c.cache.DelBucket(buckets...)
 	})
 }
 
@@ -273,15 +173,6 @@ func (c *Cache) unmarshal(bs []byte, a interface{}) error {
 	return nil
 }
 
-// 构建加载器id
-func (c *Cache) makeLoaderId(namespace, key string) uint64 {
-	f := fnv.New64a()
-	_, _ = f.Write([]byte(namespace))
-	_, _ = f.Write([]byte{':'})
-	_, _ = f.Write([]byte(key))
-	return f.Sum64()
-}
-
 // 为一个执行添加上下文
 func (c *Cache) doWithContext(ctx context.Context, fn func() error) (err error) {
 	if ctx == nil || ctx == context.Background() || ctx == context.TODO() {
@@ -303,14 +194,17 @@ func (c *Cache) doWithContext(ctx context.Context, fn func() error) (err error) 
 }
 
 // 构建超时
+//
+// 如果没有传入有效的expire, 使用默认的过期时间.
+// 默认的过期时间会检查如果 maxExpire 有效使用 defaultExpire 和 maxExpire 区间的随机值
 func (c *Cache) makeExpire(ex ...time.Duration) time.Duration {
 	if len(ex) > 0 && ex[0] != 0 {
 		return ex[0]
 	}
-	if c.endEx > 0 && c.startEx > 0 {
-		return time.Duration(rand.Int63())%(c.endEx-c.startEx) + (c.startEx)
+	if c.maxExpire > 0 && c.defaultExpire > 0 {
+		return time.Duration(rand.Int63())%(c.maxExpire-c.defaultExpire) + (c.defaultExpire)
 	}
-	return c.startEx
+	return c.defaultExpire
 }
 
 // 关闭

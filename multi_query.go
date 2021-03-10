@@ -19,18 +19,18 @@ import (
 )
 
 // 批量获取, 同MQueryWithContext
-func (c *Cache) MQuery(namespace, key string, a interface{}, config ...*QueryConfig) error {
-	return c.MQueryWithContext(nil, namespace, key, a, config...)
+func (c *Cache) MQuery(bucket string, a interface{}, queryConfigs ...*QueryConfig) error {
+	return c.MQueryWithContext(nil, bucket, a, queryConfigs...)
 }
 
 // 批量获取, a必须是长度为0的切片指针或长度等于请求数的数组指针
 //
-// QueryConfig 的 namespace 和 key 会被替换为这个方法的 namespace 和 key
+// QueryConfig 的 bucket 会被替换传入的 bucket
 // 如果有重复的query我们会进行优化, 在从缓存或加载器加载数据时会过滤掉这个query, 然后在返回数据给调用者时会将它按顺序返回
-func (c *Cache) MQueryWithContext(ctx context.Context, namespace, key string, a interface{}, config ...*QueryConfig) error {
-	queries := make([]core.IQuery, len(config))
-	for i, conf := range config {
-		queries[i] = conf.Namespace(namespace).Key(key).Make()
+func (c *Cache) MQueryWithContext(ctx context.Context, bucket string, a interface{}, queryConfigs ...*QueryConfig) error {
+	queries := make([]core.IQuery, len(queryConfigs))
+	for i, conf := range queryConfigs {
+		queries[i] = conf.Bucket(bucket).Make()
 	}
 	return c.doWithContext(ctx, func() error {
 		return c.mQuery(queries, a)
@@ -75,10 +75,10 @@ func (c *Cache) mQuery(queries []core.IQuery, a interface{}) error {
 		q := realQueries[i]
 		if cacheErr != errs.CacheMiss { // 非缓存未命中错误
 			if c.directReturnOnCacheFault { // 直接报告错误
-				cacheErr = fmt.Errorf("load from cache error. query: %s:%s?%s, err: %s", q.Namespace(), q.Key(), q.ArgsText(), cacheErr)
+				cacheErr = fmt.Errorf("load from cache error. query: %s, args: %s, err: %s", q.Bucket(), q.ArgsText(), cacheErr)
 				return cacheErr
 			}
-			cacheErr = fmt.Errorf("load from cache error, The data will be fetched from the loader. query: %s:%s?%s, err: %s", q.Namespace(), q.Key(), q.ArgsText(), cacheErr)
+			cacheErr = fmt.Errorf("load from cache error, The data will be fetched from the loader. query: %s, args: %s, err: %s", q.Bucket(), q.ArgsText(), cacheErr)
 			c.log.Error(cacheErr)
 		}
 
@@ -151,7 +151,7 @@ func (c *Cache) writeBuffsToSlice(queries []core.IQuery, buffs [][]byte, sliceTy
 		child := reflect.New(itemType) // 创建一个相同类型的指针
 		if err = c.unmarshal(bs, child.Interface()); err != nil {
 			q := queries[i]
-			return fmt.Errorf("unmarshal error. query: %s:%s?%s, err: %s", q.Namespace(), q.Key(), q.ArgsText(), err)
+			return fmt.Errorf("unmarshal error. query: %s, args: %s, err: %s", q.Bucket(), q.ArgsText(), err)
 		}
 
 		if !itemIsPtr {
@@ -184,7 +184,7 @@ func (c *Cache) writeBuffsToArray(queries []core.IQuery, buffs [][]byte, arrayTy
 		child := reflect.New(itemType) // 创建一个相同类型的指针
 		if err = c.unmarshal(bs, child.Interface()); err != nil {
 			q := queries[i]
-			return fmt.Errorf("unmarshal error. query: %s:%s?%s, err: %s", q.Namespace(), q.Key(), q.ArgsText(), err)
+			return fmt.Errorf("unmarshal error. query: %s, args: %s, err: %s", q.Bucket(), q.ArgsText(), err)
 		}
 
 		if !itemIsPtr {

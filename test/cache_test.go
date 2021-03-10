@@ -62,7 +62,7 @@ func TestMemoryCacheDel(t *testing.T) {
 }
 func TestMemoryCacheDelNamespace(t *testing.T) {
 	cache := makeMemoryCache()
-	testMemoryCacheDelNamespace(t, cache)
+	testMemoryCacheDelBucket(t, cache)
 }
 
 func TestRedisCacheGet(t *testing.T) {
@@ -79,25 +79,22 @@ func TestRedisCacheDel(t *testing.T) {
 }
 func TestRedisCacheDelNamespace(t *testing.T) {
 	cache := makeRedisCache()
-	testMemoryCacheDelNamespace(t, cache)
+	testMemoryCacheDelBucket(t, cache)
 }
 
 func testMemoryCacheGet(t *testing.T, cache *zcache.Cache) {
-	const namespace = "test"
-	const key = "key"
-	loader := zcache.NewLoader(func(query zcache.IQuery) (i interface{}, err error) {
-		s := fmt.Sprintf("%s:%s?%d", query.Namespace(), query.Key(), query.GlobalId())
+	const bucket = "test"
+	cache.RegisterLoaderFn(bucket, func(query zcache.IQuery) (i interface{}, err error) {
+		s := fmt.Sprintf("%s?%d", query.ArgsText(), query.GlobalId())
 		return s, nil
 	})
-
-	cache.RegisterLoader(namespace, key, loader)
 
 	for i := 0; i < 10; i++ {
 		k := fmt.Sprintf("k%d", i)
 		v := fmt.Sprintf("v%d", i)
 
-		q := zcache.NewQuery(namespace, key, zcache.WithQueryArgs([]interface{}{k, v}))
-		expect := fmt.Sprintf("%s:%s?%d", q.Namespace(), q.Key(), q.GlobalId())
+		q := zcache.NewQuery(bucket, zcache.WithQueryArgs([]interface{}{k, v}))
+		expect := fmt.Sprintf("%s?%d", q.ArgsText(), q.GlobalId())
 
 		var result string
 		err := cache.Get(q, &result)
@@ -106,15 +103,14 @@ func testMemoryCacheGet(t *testing.T, cache *zcache.Cache) {
 	}
 }
 func testMemoryCacheSet(t *testing.T, cache *zcache.Cache) {
-	const namespace = "test"
-	const key = "key"
+	const bucket = "test"
 
 	for i := 0; i < 10; i++ {
 		k := fmt.Sprintf("k%d", i)
 		v := fmt.Sprintf("v%d", i)
 
-		q := zcache.NewQuery(namespace, key, zcache.WithQueryArgs([]interface{}{k, v}))
-		expect := fmt.Sprintf("%s:%s?%d", q.Namespace(), q.Key(), q.GlobalId())
+		q := zcache.NewQuery(bucket, zcache.WithQueryArgs([]interface{}{k, v}))
+		expect := fmt.Sprintf("%s?%d", q.ArgsText(), q.GlobalId())
 		err := cache.Set(q, expect)
 		require.NoError(t, err)
 
@@ -125,15 +121,14 @@ func testMemoryCacheSet(t *testing.T, cache *zcache.Cache) {
 	}
 }
 func testMemoryCacheDel(t *testing.T, cache *zcache.Cache) {
-	const namespace = "test"
-	const key = "key"
+	const bucket = "test"
 
 	for i := 0; i < 10; i++ {
 		k := fmt.Sprintf("k%d", i)
 		v := fmt.Sprintf("v%d", i)
 
-		q := zcache.NewQuery(namespace, key, zcache.WithQueryArgs([]interface{}{k, v}))
-		expect := fmt.Sprintf("%s:%s?%d", q.Namespace(), q.Key(), q.GlobalId())
+		q := zcache.NewQuery(bucket, zcache.WithQueryArgs([]interface{}{k, v}))
+		expect := fmt.Sprintf("%s?%d", q.ArgsText(), q.GlobalId())
 		err := cache.Set(q, expect)
 		require.NoError(t, err)
 
@@ -150,16 +145,15 @@ func testMemoryCacheDel(t *testing.T, cache *zcache.Cache) {
 		require.Equal(t, err, zcache.LoaderNotFound)
 	}
 }
-func testMemoryCacheDelNamespace(t *testing.T, cache *zcache.Cache) {
-	const namespace = "test"
-	const key = "key"
+func testMemoryCacheDelBucket(t *testing.T, cache *zcache.Cache) {
+	const bucket = "test"
 
 	for i := 0; i < 10; i++ {
 		k := fmt.Sprintf("k%d", i)
 		v := fmt.Sprintf("v%d", i)
 
-		q := zcache.NewQuery(namespace, key, zcache.WithQueryArgs([]interface{}{k, v}))
-		expect := fmt.Sprintf("%s:%s?%d", q.Namespace(), q.Key(), q.GlobalId())
+		q := zcache.NewQuery(bucket, zcache.WithQueryArgs([]interface{}{k, v}))
+		expect := fmt.Sprintf("%s?%d", q.ArgsText(), q.GlobalId())
 		err := cache.Set(q, expect)
 		require.NoError(t, err)
 
@@ -169,14 +163,14 @@ func testMemoryCacheDelNamespace(t *testing.T, cache *zcache.Cache) {
 		require.Equal(t, result, expect)
 	}
 
-	err := cache.DelNamespace(namespace)
+	err := cache.DelBucket(bucket)
 	require.NoError(t, err)
 
 	for i := 0; i < 10; i++ {
 		k := fmt.Sprintf("k%d", i)
 		v := fmt.Sprintf("v%d", i)
 
-		q := zcache.NewQuery(namespace, key, zcache.WithQueryArgs([]interface{}{k, v}))
+		q := zcache.NewQuery(bucket, zcache.WithQueryArgs([]interface{}{k, v}))
 
 		var result string
 		err = cache.Get(q, &result)
@@ -196,8 +190,7 @@ func benchmarkAny(b *testing.B, cache *zcache.Cache, maxKeyCount int) {
 	rand.Seed(time.Now().UnixNano())
 
 	const byteLen = 512
-	const namespace = "benchmark"
-	const key = "key"
+	const bucket = "benchmark"
 
 	expects := make([][]byte, maxKeyCount)
 	for i := 0; i < maxKeyCount; i++ {
@@ -207,12 +200,12 @@ func benchmarkAny(b *testing.B, cache *zcache.Cache, maxKeyCount int) {
 		}
 		expects[i] = bs
 
-		q := zcache.NewQuery(namespace, key, zcache.WithQueryArgs(i))
+		q := zcache.NewQuery(bucket, zcache.WithQueryArgs(i))
 		err := cache.Set(q, bs)
 		require.NoError(b, err, "数据设置失败")
 	}
 
-	// 缓存随机key, 因为它本身速度太慢了(117ns/op)
+	// 缓存随机key
 	randKeys := make([]int, 1<<20)
 	for i := 0; i < len(randKeys); i++ {
 		randKeys[i] = rand.Int() % maxKeyCount
@@ -224,7 +217,7 @@ func benchmarkAny(b *testing.B, cache *zcache.Cache, maxKeyCount int) {
 		for p.Next() {
 			i++
 			k := randKeys[i&(len(randKeys)-1)]
-			q := zcache.NewQuery(namespace, key, zcache.WithQueryArgs(k))
+			q := zcache.NewQuery(bucket, zcache.WithQueryArgs(k))
 
 			var bs []byte
 			err := cache.Get(q, &bs)

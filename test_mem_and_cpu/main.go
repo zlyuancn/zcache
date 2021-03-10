@@ -52,8 +52,7 @@ func benchmark_any(cache *zcache.Cache, maxKeyCount int, clientCount int) {
 	rand.Seed(time.Now().UnixNano())
 
 	const byteLen = 512
-	const namespace = "benchmark"
-	const key = "key"
+	const bucket = "benchmark"
 
 	expects := make([][]byte, maxKeyCount)
 	for i := 0; i < maxKeyCount; i++ {
@@ -63,7 +62,7 @@ func benchmark_any(cache *zcache.Cache, maxKeyCount int, clientCount int) {
 		}
 		expects[i] = bs
 
-		q := zcache.NewQuery(namespace, key, zcache.WithQueryArgs(i))
+		q := zcache.NewQuery(bucket, zcache.WithQueryArgs(i))
 		err := cache.Set(q, bs)
 		if err != nil {
 			log.Fatalf("数据设置失败: %s", err)
@@ -94,7 +93,7 @@ func benchmark_any(cache *zcache.Cache, maxKeyCount int, clientCount int) {
 					rn := rand.Int()
 					time.Sleep(time.Duration(rn&1023+1) * time.Millisecond) // 随机等待1秒内
 					args := rn % maxKeyCount
-					q := zcache.NewQuery(namespace, key, zcache.WithQueryArgs(args))
+					q := zcache.NewQuery(bucket, zcache.WithQueryArgs(args))
 
 					var bs []byte
 					err := cache.Get(q, &bs)

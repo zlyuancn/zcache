@@ -15,32 +15,18 @@ import (
 )
 
 type QueryConfig struct {
-	namespace, key string
-	args           interface{}
-	meta           interface{}
-	loader         core.ILoader
+	bucket string
+	args   interface{}
+	meta   interface{}
+	loader core.ILoader
 }
 
 // 创建一个查询配置
 func NewQueryConfig() *QueryConfig { return &QueryConfig{} }
 
-// 创建一个查询配置并设置命名空间和key
-func NewQueryConfigNK(namespace, key string) *QueryConfig {
-	return &QueryConfig{
-		namespace: namespace,
-		key:       key,
-	}
-}
-
-// 设置 namespace
-func (m *QueryConfig) Namespace(namespace string) *QueryConfig {
-	m.namespace = namespace
-	return m
-}
-
-// 设置 key
-func (m *QueryConfig) Key(key string) *QueryConfig {
-	m.key = key
+// 设置 bucket
+func (m *QueryConfig) Bucket(bucket string) *QueryConfig {
+	m.bucket = bucket
 	return m
 }
 
@@ -70,7 +56,7 @@ func (m *QueryConfig) LoaderFn(fn loader.LoaderFn, opts ...loader.Option) *Query
 
 // 构建 query
 func (m *QueryConfig) Make() core.IQuery {
-	return NewQuery(m.namespace, m.key,
+	return NewQuery(m.bucket,
 		query.WithArgs(m.args),
 		query.WithMeta(m.meta),
 		query.WithLoader(m.loader),

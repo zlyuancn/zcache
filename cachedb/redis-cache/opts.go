@@ -16,3 +16,10 @@ func WithKeyPrefix(prefix string) Option {
 		r.keyPrefix = prefix
 	}
 }
+
+// 设置参数分隔符
+func WithArgsSep(sep string) Option {
+	return func(r *redisCache) {
+		r.argsSep = sep
+	}
+}

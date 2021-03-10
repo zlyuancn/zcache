@@ -16,7 +16,7 @@ import (
 
 func main() {
 	cache := zcache.NewCache()
-	cache.RegisterLoaderFn("test", "key", func(query zcache.IQuery) (interface{}, error) {
+	cache.RegisterLoaderFn("test", func(query zcache.IQuery) (interface{}, error) {
 		fmt.Println("重新加载", query.Args())
 		return "hello" + query.ArgsText(), nil // 返回 hello + 查询的参数
 	})
@@ -24,7 +24,7 @@ func main() {
 	var results []string // 批量获取结果的接收变量必须是长度为0的切片或长度等于请求数的数组
 
 	// 提供多个请求参数进行批量获取, 如果有重复的query我们会进行优化
-	_ = cache.MQuery("test", "key", &results, // 保存结果的变量必须是指针
+	_ = cache.MQuery("test", &results, // 保存结果的变量必须是指针
 		zcache.NewQueryConfig().Args("world1"),
 		zcache.NewQueryConfig().Args("world2"),
 		zcache.NewQueryConfig().Args("world3"),

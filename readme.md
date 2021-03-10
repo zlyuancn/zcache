@@ -8,9 +8,9 @@
 cache := zcache.NewCache() // 初始化示例
 
 var a string
-_ = cache.Query("test", "key", &a, // 获取数据, 保存结果的变量必须是指针
-    // 为query设置查询加载函数, 缓存无数据时执行这个加载函数加载数据, 加载的数据会自动存入缓存
-    zcache.WithQueryLoaderFn(func (query core.IQuery) (interface{}, error) {
+_ = cache.Query("test", &a, // 获取数据, 保存结果的变量必须是指针
+    // 为query设置查询加载函数, 缓存未命中时执行这个加载函数生成数据, 生成的数据会自动存入缓存
+    zcache.NewQueryConfig().LoaderFn(func(query core.IQuery) (interface{}, error) {
         // 在这里写入你的db逻辑
         return "hello", nil
     }),

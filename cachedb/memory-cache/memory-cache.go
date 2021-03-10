@@ -9,7 +9,6 @@
 package memory_cache
 
 import (
-	"bytes"
 	"sync"
 	"time"
 
@@ -47,35 +46,35 @@ func NewMemoryCache(opts ...Option) core.ICacheDB {
 }
 
 // 获取桶
-func (m *memoryCache) bucket(namespace string) *go_cache.Cache {
+func (m *memoryCache) bucket(bucket string) *go_cache.Cache {
 	m.mx.RLock()
-	c, ok := m.buckets[namespace]
+	cache, ok := m.buckets[bucket]
 	m.mx.RUnlock()
 	if ok {
-		return c
+		return cache
 	}
 
 	m.mx.Lock()
-	if c, ok = m.buckets[namespace]; ok {
+	if cache, ok = m.buckets[bucket]; ok {
 		m.mx.Unlock()
-		return c
+		return cache
 	}
 
-	c = go_cache.New(0, m.cleanupInterval)
-	m.buckets[namespace] = c
+	cache = go_cache.New(0, m.cleanupInterval)
+	m.buckets[bucket] = cache
 	m.mx.Unlock()
-	return c
+	return cache
 }
 
 func (m *memoryCache) Set(query core.IQuery, bs []byte, ex time.Duration) error {
 	if ex <= 0 {
 		ex = NoExpiration
 	}
-	m.bucket(query.Namespace()).Set(m.makeKey(query), bs, ex)
+	m.bucket(query.Bucket()).Set(query.ArgsText(), bs, ex)
 	return nil
 }
 func (m *memoryCache) Get(query core.IQuery) ([]byte, error) {
-	v, ok := m.bucket(query.Namespace()).Get(m.makeKey(query))
+	v, ok := m.bucket(query.Bucket()).Get(query.ArgsText())
 	if !ok {
 		return nil, errs.CacheMiss
 	}
@@ -88,7 +87,7 @@ func (m *memoryCache) MGet(queries ...core.IQuery) ([][]byte, []error) {
 	buffs := make([][]byte, len(queries))
 	es := make([]error, len(queries))
 	for i, query := range queries {
-		v, ok := m.bucket(query.Namespace()).Get(m.makeKey(query))
+		v, ok := m.bucket(query.Bucket()).Get(query.ArgsText())
 		if !ok {
 			es[i] = errs.CacheMiss
 			continue
@@ -103,29 +102,17 @@ func (m *memoryCache) MGet(queries ...core.IQuery) ([][]byte, []error) {
 
 func (m *memoryCache) Del(queries ...core.IQuery) error {
 	for _, query := range queries {
-		m.bucket(query.Namespace()).Delete(m.makeKey(query))
+		m.bucket(query.Bucket()).Delete(query.ArgsText())
 	}
 	return nil
 }
-func (m *memoryCache) DelNamespace(namespaces ...string) error {
+func (m *memoryCache) DelBucket(buckets ...string) error {
 	m.mx.Lock()
-	for _, namespace := range namespaces {
-		delete(m.buckets, namespace)
+	for _, bucket := range buckets {
+		delete(m.buckets, bucket)
 	}
 	m.mx.Unlock()
 	return nil
-}
-
-func (m *memoryCache) makeKey(query core.IQuery) string {
-	if query.ArgsText() == "" {
-		return query.Key()
-	}
-
-	var buff bytes.Buffer
-	buff.WriteString(query.Key())
-	buff.WriteByte('?')
-	buff.WriteString(query.ArgsText())
-	return buff.String()
 }
 
 func (m *memoryCache) Close() error {

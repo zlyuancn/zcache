@@ -33,6 +33,6 @@ func (*noCache) MGet(queries ...core.IQuery) ([][]byte, []error) {
 	return buffs, es
 }
 
-func (*noCache) Del(...core.IQuery) error     { return nil }
-func (*noCache) DelNamespace(...string) error { return nil }
-func (*noCache) Close() error                 { return nil }
+func (*noCache) Del(...core.IQuery) error          { return nil }
+func (*noCache) DelBucket(buckets ...string) error { return nil }
+func (*noCache) Close() error                      { return nil }
