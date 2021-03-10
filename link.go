@@ -44,6 +44,12 @@ var (
 	DataIsNil = errs.DataIsNil
 )
 
+// 错误列表
+type Errors = errs.Errors
+
+// 尝试将err解包为*Errors
+var DecodeErrors = errs.DecodeErrors
+
 type (
 	ILoader = core.ILoader
 	IQuery  = core.IQuery
