@@ -29,8 +29,8 @@ func (c *Cache) MQuery(bucket string, a interface{}, queryConfigs ...*QueryConfi
 // 如果有重复的query我们会进行优化, 在从缓存或加载器加载数据时会过滤掉这个query, 然后在返回数据给调用者时会将它按顺序返回
 func (c *Cache) MQueryWithContext(ctx context.Context, bucket string, a interface{}, queryConfigs ...*QueryConfig) error {
 	queries := make([]core.IQuery, len(queryConfigs))
-	for i, conf := range queryConfigs {
-		queries[i] = conf.Bucket(bucket).Make()
+	for i, config := range queryConfigs {
+		queries[i] = config.Bucket(bucket).Make()
 	}
 	return c.doWithContext(ctx, func() error {
 		return c.mQuery(queries, a)

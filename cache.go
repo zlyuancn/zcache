@@ -120,14 +120,33 @@ func (c *Cache) SetWithContext(ctx context.Context, query core.IQuery, a interfa
 }
 
 // 删除指定数据
-func (c *Cache) Del(queries ...core.IQuery) error {
-	return c.DelWithContext(nil, queries...)
+func (c *Cache) Remove(queries ...core.IQuery) error {
+	return c.RemoveWithContext(nil, queries...)
 }
 
 // 删除指定数据
-func (c *Cache) DelWithContext(ctx context.Context, queries ...core.IQuery) (err error) {
+func (c *Cache) RemoveWithContext(ctx context.Context, queries ...core.IQuery) (err error) {
 	if len(queries) == 0 {
 		return nil
+	}
+	return c.doWithContext(ctx, func() error {
+		return c.cache.Del(queries...)
+	})
+}
+
+// 删除指定数据
+func (c *Cache) Del(bucket string, queryConfigs ...*QueryConfig) error {
+	return c.DelWithContext(nil, bucket, queryConfigs...)
+}
+
+// 删除指定数据
+func (c *Cache) DelWithContext(ctx context.Context, bucket string, queryConfigs ...*QueryConfig) error {
+	if len(queryConfigs) == 0 {
+		return nil
+	}
+	queries := make([]core.IQuery, len(queryConfigs))
+	for i, config := range queryConfigs {
+		queries[i] = config.Bucket(bucket).Make()
 	}
 	return c.doWithContext(ctx, func() error {
 		return c.cache.Del(queries...)
