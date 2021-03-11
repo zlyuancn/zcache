@@ -142,18 +142,23 @@ func (r *redisCache) DelBucket(buckets ...string) error {
 }
 
 func (r *redisCache) makeKey(query core.IQuery) string {
-	var buff bytes.Buffer
-	if r.keyPrefix != "" {
-		buff.WriteString(r.keyPrefix)
-	}
-	buff.WriteString(query.Bucket())
-	if query.ArgsText() != "" {
-		buff.WriteString(r.argsSep)
-		buff.WriteString(query.ArgsText())
-	}
-	return buff.String()
+	return MakeKey(query, r.keyPrefix, r.argsSep)
 }
 
 func (r *redisCache) Close() error {
 	return r.client.Close()
+}
+
+// 构建key函数
+func MakeKey(query core.IQuery, keyPrefix, argsSep string) string {
+	var buff bytes.Buffer
+	if keyPrefix != "" {
+		buff.WriteString(keyPrefix)
+	}
+	buff.WriteString(query.Bucket())
+	buff.WriteString(argsSep)
+	if query.ArgsText() != "" {
+		buff.WriteString(query.ArgsText())
+	}
+	return buff.String()
 }
