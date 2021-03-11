@@ -25,12 +25,12 @@ func main() {
 
 	// 提供多个请求参数进行批量获取, 如果有重复的query我们会进行优化
 	_ = cache.MQuery("test", &results, // 保存结果的变量必须是指针
-		zcache.NewQueryConfig().Args("world1"),
-		zcache.NewQueryConfig().Args("world2"),
-		zcache.NewQueryConfig().Args("world3"),
+		zcache.QC().Args("world1"),
+		zcache.QC().Args("world2"),
+		zcache.QC().Args("world3"),
 		// 这里出现了重复的query, 我们在从缓存或加载器加载数据时会过滤掉这个query, 然后在返回数据给调用者时会将它按顺序返回
-		zcache.NewQueryConfig().Args("world1"),
-		zcache.NewQueryConfig().Args("world2"),
+		zcache.QC().Args("world1"),
+		zcache.QC().Args("world2"),
 	)
 
 	fmt.Println(results)

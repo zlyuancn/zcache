@@ -23,6 +23,13 @@ var (
 )
 
 var (
+	// 创建一个查询
+	Q = NewQuery
+	// 创建一个查询配置
+	QC = NewQueryConfig
+	// 根据选项创建一个查询
+	QO = query.NewQuery
+
 	// 根据选项创建一个查询
 	NewQueryWithOption = query.NewQuery
 	// 设置查询参数
