@@ -48,41 +48,53 @@ func makeRedisCache() *zcache.Cache {
 	)
 }
 
-func TestMemoryCacheGet(t *testing.T) {
-	cache := makeMemoryCache()
-	testMemoryCacheGet(t, cache)
-}
-func TestMemoryCacheSet(t *testing.T) {
-	cache := makeMemoryCache()
-	testMemoryCacheSet(t, cache)
-}
-func TestMemoryCacheDel(t *testing.T) {
-	cache := makeMemoryCache()
-	testMemoryCacheDel(t, cache)
-}
-func TestMemoryCacheDelNamespace(t *testing.T) {
-	cache := makeMemoryCache()
-	testMemoryCacheDelBucket(t, cache)
+func TestMemoryCache(t *testing.T) {
+	t.Run("Get", func(t *testing.T) {
+		cache := makeMemoryCache()
+		testCacheGet(t, cache)
+	})
+	t.Run("Set", func(t *testing.T) {
+		cache := makeMemoryCache()
+		testCacheSet(t, cache)
+	})
+	t.Run("Del", func(t *testing.T) {
+		cache := makeMemoryCache()
+		testCacheDel(t, cache)
+	})
+	t.Run("DelBucket", func(t *testing.T) {
+		cache := makeMemoryCache()
+		testCacheDelBucket(t, cache)
+	})
+	t.Run("Expire", func(t *testing.T) {
+		cache := makeMemoryCache()
+		testCacheExpire(t, cache)
+	})
 }
 
 func TestRedisCacheGet(t *testing.T) {
-	cache := makeRedisCache()
-	testMemoryCacheGet(t, cache)
-}
-func TestRedisCacheSet(t *testing.T) {
-	cache := makeRedisCache()
-	testMemoryCacheSet(t, cache)
-}
-func TestRedisCacheDel(t *testing.T) {
-	cache := makeRedisCache()
-	testMemoryCacheDel(t, cache)
-}
-func TestRedisCacheDelNamespace(t *testing.T) {
-	cache := makeRedisCache()
-	testMemoryCacheDelBucket(t, cache)
+	t.Run("Get", func(t *testing.T) {
+		cache := makeRedisCache()
+		testCacheGet(t, cache)
+	})
+	t.Run("Set", func(t *testing.T) {
+		cache := makeRedisCache()
+		testCacheSet(t, cache)
+	})
+	t.Run("Del", func(t *testing.T) {
+		cache := makeRedisCache()
+		testCacheDel(t, cache)
+	})
+	t.Run("DelBucket", func(t *testing.T) {
+		cache := makeRedisCache()
+		testCacheDelBucket(t, cache)
+	})
+	t.Run("Expire", func(t *testing.T) {
+		cache := makeRedisCache()
+		testCacheExpire(t, cache)
+	})
 }
 
-func testMemoryCacheGet(t *testing.T, cache *zcache.Cache) {
+func testCacheGet(t *testing.T, cache *zcache.Cache) {
 	const bucket = "test"
 	cache.RegisterLoaderFn(bucket, func(query zcache.IQuery) (i interface{}, err error) {
 		s := fmt.Sprintf("%s?%d", query.ArgsText(), query.GlobalId())
@@ -98,11 +110,11 @@ func testMemoryCacheGet(t *testing.T, cache *zcache.Cache) {
 
 		var result string
 		err := cache.Get(q, &result)
-		require.NoError(t, err)
-		require.Equal(t, result, expect)
+		require.NoError(t, err, "获取失败")
+		require.Equal(t, result, expect, "数据和预期不符")
 	}
 }
-func testMemoryCacheSet(t *testing.T, cache *zcache.Cache) {
+func testCacheSet(t *testing.T, cache *zcache.Cache) {
 	const bucket = "test"
 
 	for i := 0; i < 10; i++ {
@@ -112,15 +124,15 @@ func testMemoryCacheSet(t *testing.T, cache *zcache.Cache) {
 		q := zcache.Q(bucket, zcache.QC().Args([]interface{}{k, v}))
 		expect := fmt.Sprintf("%s?%d", q.ArgsText(), q.GlobalId())
 		err := cache.Set(q, expect)
-		require.NoError(t, err)
+		require.NoError(t, err, "存入失败")
 
 		var result string
 		err = cache.Get(q, &result)
-		require.NoError(t, err)
-		require.Equal(t, result, expect)
+		require.NoError(t, err, "获取失败")
+		require.Equal(t, result, expect, "数据和预期不符")
 	}
 }
-func testMemoryCacheDel(t *testing.T, cache *zcache.Cache) {
+func testCacheDel(t *testing.T, cache *zcache.Cache) {
 	const bucket = "test"
 
 	for i := 0; i < 10; i++ {
@@ -130,22 +142,21 @@ func testMemoryCacheDel(t *testing.T, cache *zcache.Cache) {
 		q := zcache.Q(bucket, zcache.QC().Args([]interface{}{k, v}))
 		expect := fmt.Sprintf("%s?%d", q.ArgsText(), q.GlobalId())
 		err := cache.Set(q, expect)
-		require.NoError(t, err)
+		require.NoError(t, err, "存入失败")
 
 		var result string
 		err = cache.Get(q, &result)
-		require.NoError(t, err)
-		require.Equal(t, result, expect)
+		require.NoError(t, err, "获取失败")
+		require.Equal(t, result, expect, "数据和预期不符")
 
 		err = cache.Remove(q)
-		require.NoError(t, err)
+		require.NoError(t, err, "移除失败")
 
-		result = ""
 		err = cache.Get(q, &result)
-		require.Equal(t, err, zcache.LoaderNotFound)
+		require.Equal(t, err, zcache.LoaderNotFound, "数据和预期不符")
 	}
 }
-func testMemoryCacheDelBucket(t *testing.T, cache *zcache.Cache) {
+func testCacheDelBucket(t *testing.T, cache *zcache.Cache) {
 	const bucket = "test"
 
 	for i := 0; i < 10; i++ {
@@ -176,6 +187,22 @@ func testMemoryCacheDelBucket(t *testing.T, cache *zcache.Cache) {
 		err = cache.Get(q, &result)
 		require.Equal(t, err, zcache.LoaderNotFound)
 	}
+}
+func testCacheExpire(t *testing.T, cache *zcache.Cache) {
+	const bucket = "test"
+	const expect = "hello"
+	err := cache.Save(bucket, expect, time.Millisecond*100)
+	require.NoError(t, err, "存入失败")
+
+	var result string
+	err = cache.Query(bucket, &result)
+	require.NoError(t, err, "获取失败")
+	require.Equal(t, result, expect, "数据和预期不符")
+
+	time.Sleep(time.Millisecond*200)
+
+	err = cache.Query(bucket, &result)
+	require.Equal(t, err, zcache.LoaderNotFound, "数据和预期不符")
 }
 
 func BenchmarkMemoryCache_10k(b *testing.B) {
