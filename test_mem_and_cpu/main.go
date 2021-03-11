@@ -62,8 +62,7 @@ func benchmark_any(cache *zcache.Cache, maxKeyCount int, clientCount int) {
 		}
 		expects[i] = bs
 
-		q := zcache.NewQuery(bucket, zcache.NewQueryConfig().Args(i))
-		err := cache.Set(q, bs)
+		err := cache.Save(bucket, bs, 0, zcache.QC().Args(i))
 		if err != nil {
 			log.Fatalf("数据设置失败: %s", err)
 		}
@@ -93,10 +92,9 @@ func benchmark_any(cache *zcache.Cache, maxKeyCount int, clientCount int) {
 					rn := rand.Int()
 					time.Sleep(time.Duration(rn&1023+1) * time.Millisecond) // 随机等待1秒内
 					args := rn % maxKeyCount
-					q := zcache.NewQuery(bucket, zcache.NewQueryConfig().Args(args))
 
 					var bs []byte
-					err := cache.Get(q, &bs)
+					err := cache.Query(bucket, &bs, zcache.QC().Args(args))
 					if err != nil {
 						log.Fatalf("数据加载失败: %s", err)
 					}

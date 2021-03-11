@@ -23,7 +23,7 @@ func main() {
 
 	// 创建三个请求参数
 	q1 := zcache.NewQuery("test", zcache.NewQueryConfig().Meta("world"))
-	q2 := zcache.Q("test", zcache.NewQueryConfig().Meta("world2"))          // 等效于 NewQuery
+	q2 := zcache.Q("test", zcache.QC().Meta("world2"))          // 等效于 NewQuery
 	q3 := zcache.NewQueryWithOption("test", zcache.WithQueryMeta("world3")) // 等效于 NewQuery
 	q4 := zcache.QO("test", zcache.WithQueryMeta("world4"))                 // 等效于 NewQueryWithOption
 
