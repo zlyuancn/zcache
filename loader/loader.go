@@ -21,8 +21,8 @@ type LoaderFn = func(query core.IQuery) (interface{}, error)
 var _ core.ILoader = (*Loader)(nil)
 
 type Loader struct {
-	fn             LoaderFn      // 加载函数
-	startEx, endEx time.Duration // 有效时间
+	fn                LoaderFn      // 加载函数
+	expire, maxExpire time.Duration // 有效时间
 }
 
 // 创建一个加载器
@@ -31,9 +31,9 @@ func NewLoader(fn LoaderFn, opts ...Option) core.ILoader {
 		panic(errors.New("load func of loader is empty"))
 	}
 	l := &Loader{
-		fn:      fn,
-		startEx: 0,
-		endEx:   0,
+		fn:        fn,
+		expire:    0,
+		maxExpire: 0,
 	}
 	for _, o := range opts {
 		o(l)
@@ -50,8 +50,8 @@ func (l *Loader) Load(query core.IQuery) (interface{}, error) {
 }
 
 func (l *Loader) Expire() (ex time.Duration) {
-	if l.endEx > 0 && l.startEx > 0 {
-		return time.Duration(rand.Int63())%(l.endEx-l.startEx) + (l.startEx)
+	if l.maxExpire > l.expire && l.expire > 0 {
+		return time.Duration(rand.Int63())%(l.maxExpire-l.expire) + (l.expire)
 	}
-	return l.startEx
+	return l.expire
 }

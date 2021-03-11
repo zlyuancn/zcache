@@ -32,7 +32,7 @@ func WithCacheDB(cacheDB core.ICacheDB) Option {
 
 // 设置全局默认过期时间
 //
-// 如果 maxExpire > 0 且 expire > 0, 则过期时间在 [expire, maxExpire-1] 区间随机
+// 如果 maxExpire > expire 且 expire > 0, 则过期时间在 [expire, maxExpire-1] 区间随机
 // 如果 expire <= 0 (默认), 则永不过期
 func WithDefaultExpire(expire time.Duration, maxExpire ...time.Duration) Option {
 	return func(l *Cache) {

@@ -105,7 +105,7 @@ func (c *Cache) load(query core.IQuery) (bs []byte, err error) {
 		}
 
 		// 写入缓存
-		cacheErr := c.cache.Set(query, bs, c.makeExpire(l.Expire()))
+		cacheErr := c.cache.Set(query, bs, c.makeExpire(nil, l.Expire()))
 		if cacheErr != nil {
 			cacheErr = fmt.Errorf("write to cache error: %s", cacheErr)
 			if c.directReturnOnCacheFault {

@@ -9,11 +9,11 @@ cache := zcache.NewCache() // 初始化示例
 
 var a string
 _ = cache.Query("test", &a, // 获取数据, 保存结果的变量必须是指针
-    // 为query设置查询加载函数, 缓存未命中时执行这个加载函数生成数据, 生成的数据会自动存入缓存
-    zcache.QC().LoaderFn(func(query core.IQuery) (interface{}, error) {
-        // 在这里写入你的db逻辑
-        return "hello", nil
-    }),
+// 为query设置查询加载函数, 缓存未命中时执行这个加载函数生成数据, 生成的数据会自动存入缓存
+zcache.QC().LoaderFn(func (query core.IQuery) (interface{}, error) {
+// 在这里写入你的db逻辑
+return "hello", nil
+}),
 )
 
 fmt.Println(a)
@@ -91,6 +91,10 @@ BenchmarkRedisCache_10k-50       	   60328	     17439 ns/op
 BenchmarkRedisCache_10k-200      	   52489	     19878 ns/op
 BenchmarkRedisCache_10k-500      	   36250	     30525 ns/op
 ```
+
+# 缓存时间优先级说明
+
+传入的 expire > 传入的加载器设置的 expire > 默认的加载器设置的 expire > 全局设置的 expire
 
 # 示例
 

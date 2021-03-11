@@ -97,11 +97,15 @@ func (c *Cache) RegisterLoaderFn(bucket string, fn loader.LoaderFn, opts ...load
 }
 
 // 设置数据到缓存
+//
+// ex < 0 表示永不过期, ex = 0 或未设置表示使用默认过期时间
 func (c *Cache) Set(query core.IQuery, a interface{}, ex ...time.Duration) error {
 	return c.SetWithContext(nil, query, a, ex...)
 }
 
 // 设置数据到缓存
+//
+// ex < 0 表示永不过期, ex = 0 或未设置表示使用默认过期时间
 //
 // ex < 0 表示永不过期, ex = 0 或未设置表示使用默认过期时间
 func (c *Cache) SetWithContext(ctx context.Context, query core.IQuery, a interface{}, ex ...time.Duration) error {
@@ -117,7 +121,7 @@ func (c *Cache) set(query core.IQuery, a interface{}, ex ...time.Duration) error
 		return err
 	}
 
-	err = c.cache.Set(query, bs, c.makeExpire(ex...))
+	err = c.cache.Set(query, bs, c.makeExpire(query, ex...))
 	if err != nil {
 		err = fmt.Errorf("write to cache error: %s", err)
 		query.SetError(err)
@@ -127,11 +131,15 @@ func (c *Cache) set(query core.IQuery, a interface{}, ex ...time.Duration) error
 }
 
 // 保存一条数据到缓存
+//
+// ex < 0 表示永不过期, ex = 0 或未设置表示使用默认过期时间
 func (c *Cache) Save(bucket string, a interface{}, ex time.Duration, queryConfig ...*QueryConfig) error {
 	return c.SaveWithContext(nil, bucket, a, ex, queryConfig...)
 }
 
 // 保存一条数据到缓存
+//
+// ex < 0 表示永不过期, ex = 0 或未设置表示使用默认过期时间
 func (c *Cache) SaveWithContext(ctx context.Context, bucket string, a interface{}, ex time.Duration, queryConfig ...*QueryConfig) error {
 	query := NewQuery(bucket, queryConfig...)
 	return c.doWithContext(ctx, func() error {
@@ -249,13 +257,22 @@ func (c *Cache) doWithContext(ctx context.Context, fn func() error) (err error) 
 
 // 构建超时
 //
-// 如果没有传入有效的expire, 使用默认的过期时间.
-// 默认的过期时间会检查如果 maxExpire 有效使用 defaultExpire 和 maxExpire 区间的随机值
-func (c *Cache) makeExpire(ex ...time.Duration) time.Duration {
+// 有效的过期时间是非空且不为0的.
+// 优先级: ex > query的加载器函数设置的expire > 全局定义的expire
+// 如果过期时间小于0表示永不过期.
+func (c *Cache) makeExpire(query core.IQuery, ex ...time.Duration) time.Duration {
 	if len(ex) > 0 && ex[0] != 0 {
 		return ex[0]
 	}
-	if c.maxExpire > 0 && c.defaultExpire > 0 {
+
+	if query != nil && query.Loader() != nil {
+		expire := query.Loader().Expire()
+		if expire != 0 {
+			return expire
+		}
+	}
+
+	if c.maxExpire > c.defaultExpire && c.defaultExpire > 0 {
 		return time.Duration(rand.Int63())%(c.maxExpire-c.defaultExpire) + (c.defaultExpire)
 	}
 	return c.defaultExpire
