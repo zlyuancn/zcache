@@ -42,10 +42,10 @@ if (v[1] == "0") then redis.log(redis.LOG_NOTICE, "end scan del key:", KEYS[1]) 
 -- 返回游标, 如果返回0 应该结束循环
 return v[1]`
 
-func (r *redisCache) scanDelKey(matchKey string) (err error) {
+func (r *redisCache) scanDelKey(ctx context.Context, matchKey string) (err error) {
 	var cursor int
 	for {
-		cursor, err = r.client.Eval(context.Background(), luaScanDel, []string{matchKey, strconv.Itoa(cursor)}).Int()
+		cursor, err = r.client.Eval(ctx, luaScanDel, []string{matchKey, strconv.Itoa(cursor)}).Int()
 		if err != nil {
 			return err
 		}

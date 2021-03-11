@@ -24,12 +24,17 @@ import (
 // 默认参数分隔符
 const defaultArgsSep = ":"
 
+// 默认操作超时时间
+const defaultDoTimeout = time.Second * 5
+
 var _ core.ICacheDB = (*redisCache)(nil)
 
 type redisCache struct {
 	client    rredis.UniversalClient // redis客户端
 	keyPrefix string                 // key前缀
 	argsSep   string
+
+	doTimeout time.Duration // 操作超时时间
 }
 
 func NewRedisCache(redisClient rredis.UniversalClient, opts ...Option) core.ICacheDB {
@@ -40,6 +45,10 @@ func NewRedisCache(redisClient rredis.UniversalClient, opts ...Option) core.ICac
 	for _, o := range opts {
 		o(r)
 	}
+
+	if r.doTimeout <= 0 {
+		r.doTimeout = defaultDoTimeout
+	}
 	return r
 }
 
@@ -47,10 +56,15 @@ func (r *redisCache) Set(query core.IQuery, bs []byte, ex time.Duration) error {
 	if ex <= 0 {
 		ex = -1
 	}
-	return r.client.Set(context.Background(), r.makeKey(query), bs, ex).Err()
+
+	ctx, cancel := context.WithTimeout(context.Background(), r.doTimeout)
+	defer cancel()
+	return r.client.Set(ctx, r.makeKey(query), bs, ex).Err()
 }
 func (r *redisCache) Get(query core.IQuery) ([]byte, error) {
-	result, err := r.client.Get(context.Background(), r.makeKey(query)).Bytes()
+	ctx, cancel := context.WithTimeout(context.Background(), r.doTimeout)
+	defer cancel()
+	result, err := r.client.Get(ctx, r.makeKey(query)).Bytes()
 	if err == rredis.Nil {
 		return nil, errs.CacheMiss
 	}
@@ -67,7 +81,9 @@ func (r *redisCache) MGet(queries ...core.IQuery) ([][]byte, []error) {
 	}
 
 	// 查询数据
-	results, err := r.client.MGet(context.Background(), keys...).Result()
+	ctx, cancel := context.WithTimeout(context.Background(), r.doTimeout)
+	defer cancel()
+	results, err := r.client.MGet(ctx, keys...).Result()
 	if err == nil && len(results) != len(queries) { // 获取到数据, 但是数量不对
 		err = errors.New("cached result is inconsistent with the number of requests")
 	}
@@ -103,7 +119,9 @@ func (r *redisCache) Del(queries ...core.IQuery) error {
 		keys[i] = r.makeKey(query)
 	}
 
-	err := r.client.Del(context.Background(), keys...).Err()
+	ctx, cancel := context.WithTimeout(context.Background(), r.doTimeout)
+	defer cancel()
+	err := r.client.Del(ctx, keys...).Err()
 	if err == rredis.Nil { // 虽然测试了不会出现 redis.Nil, 但是我们要考虑
 		return nil
 	}
@@ -111,9 +129,12 @@ func (r *redisCache) Del(queries ...core.IQuery) error {
 }
 
 func (r *redisCache) DelBucket(buckets ...string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), r.doTimeout)
+	defer cancel()
+
 	for _, bucket := range buckets {
 		key := r.keyPrefix + bucket + defaultArgsSep + "*"
-		if err := r.scanDelKey(key); err != nil {
+		if err := r.scanDelKey(ctx, key); err != nil {
 			return err
 		}
 	}
