@@ -26,6 +26,8 @@ func Marshal(a interface{}) ([]byte, error) {
 	switch v := a.(type) {
 	case string:
 		return []byte(v), nil
+	case []byte:
+		return v, nil
 	case bool:
 		if v {
 			return []byte("true"), nil
