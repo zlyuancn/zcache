@@ -66,8 +66,6 @@ fmt.Println(a)
 + 我们提供了一个占位符, 如果在loader结果中返回 `nil`, 我们会将它存入缓存, 当你在获取它的时候会收到错误 `errs.DataIsNil`
 + 在用户请求key的时候预判断它是否可能不存在, 比如判断id长度不等于32(uuid去掉横杠的长度)的请求直接返回数据不存在错误
 
-注意: 在批量获取时如果某条数据是 `nil` 将会停止解码并返回 `errs.DataIsNil`. 如果有好的建议请联系我们
-
 # benchmark
 
 > 未模拟用户请求和db加载, 直接测试本模块本身的性能
@@ -81,16 +79,17 @@ go test -v -run "^$" -bench "^Benchmark.+$" -cpu 8,20,50,200,500 .
 ```text
 CPU: 4c8t 3.7GHz
 # memory-cache
-BenchmarkMemoryCache_10k-8        	 4167741	       287 ns/op
-BenchmarkMemoryCache_10k-20        	 3985488	       308 ns/op
-BenchmarkMemoryCache_10k-50        	 3968851	       308 ns/op
-BenchmarkMemoryCache_10k-200       	 3960068	       320 ns/op
-BenchmarkMemoryCache_10k-500       	 3601851	       339 ns/op
-BenchmarkRedisCache_10k-8         	   53870	     21670 ns/op
-BenchmarkRedisCache_10k-20         	   68161	     17536 ns/op
-BenchmarkRedisCache_10k-50         	   75562	     16189 ns/op
-BenchmarkRedisCache_10k-200        	   62276	     18630 ns/op
-BenchmarkRedisCache_10k-500        	   41538	     28168 ns/op
+BenchmarkMemoryCache_10k-8       	 3366450	       359 ns/op
+BenchmarkMemoryCache_10k-20      	 3006697	       363 ns/op
+BenchmarkMemoryCache_10k-50      	 3310576	       369 ns/op
+BenchmarkMemoryCache_10k-200     	 3186573	       377 ns/op
+BenchmarkMemoryCache_10k-500     	 2937687	       403 ns/op
+# redis-cache
+BenchmarkRedisCache_10k-8        	   50944	     23504 ns/op
+BenchmarkRedisCache_10k-20       	   64591	     18694 ns/op
+BenchmarkRedisCache_10k-50       	   60328	     17439 ns/op
+BenchmarkRedisCache_10k-200      	   52489	     19878 ns/op
+BenchmarkRedisCache_10k-500      	   36250	     30525 ns/op
 ```
 
 # 示例
