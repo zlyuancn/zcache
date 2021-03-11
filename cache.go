@@ -106,16 +106,41 @@ func (c *Cache) Set(query core.IQuery, a interface{}, ex ...time.Duration) error
 // ex < 0 表示永不过期, ex = 0 或未设置表示使用默认过期时间
 func (c *Cache) SetWithContext(ctx context.Context, query core.IQuery, a interface{}, ex ...time.Duration) error {
 	return c.doWithContext(ctx, func() error {
-		bs, err := c.marshal(a)
-		if err != nil {
-			return err
-		}
+		return c.set(query, a, ex...)
+	})
+}
 
-		err = c.cache.Set(query, bs, c.makeExpire(ex...))
-		if err != nil {
-			return fmt.Errorf("write to cache error, query: %s, args:%s, err: %s", query.Bucket(), query.ArgsText(), err)
-		}
-		return nil
+func (c *Cache) set(query core.IQuery, a interface{}, ex ...time.Duration) error {
+	bs, err := c.marshal(a)
+	if err != nil {
+		query.SetError(err)
+		return err
+	}
+
+	err = c.cache.Set(query, bs, c.makeExpire(ex...))
+	if err != nil {
+		err = fmt.Errorf("write to cache error: %s", err)
+		query.SetError(err)
+		return err
+	}
+	return nil
+}
+
+// 保存一条数据到缓存
+func (c *Cache) Save(bucket string, a interface{}, ex time.Duration, queryConfig ...*QueryConfig) error {
+	return c.SaveWithContext(nil, bucket, a, ex, queryConfig...)
+}
+
+// 保存一条数据到缓存
+func (c *Cache) SaveWithContext(ctx context.Context, bucket string, a interface{}, ex time.Duration, queryConfig ...*QueryConfig) error {
+	var query core.IQuery
+	if len(queryConfig) > 0 {
+		query = queryConfig[0].Bucket(bucket).Make()
+	} else {
+		query = NewQuery(bucket)
+	}
+	return c.doWithContext(ctx, func() error {
+		return c.set(query, a, ex)
 	})
 }
 
@@ -130,7 +155,14 @@ func (c *Cache) RemoveWithContext(ctx context.Context, queries ...core.IQuery) (
 		return nil
 	}
 	return c.doWithContext(ctx, func() error {
-		return c.cache.Del(queries...)
+		err := c.cache.Del(queries...)
+		if err == nil {
+			return nil
+		}
+		for _, q := range queries {
+			q.SetError(err)
+		}
+		return err
 	})
 }
 
@@ -149,7 +181,15 @@ func (c *Cache) DelWithContext(ctx context.Context, bucket string, queryConfigs 
 		queries[i] = config.Bucket(bucket).Make()
 	}
 	return c.doWithContext(ctx, func() error {
-		return c.cache.Del(queries...)
+		err := c.cache.Del(queries...)
+		if err == nil {
+			return nil
+		}
+
+		for _, qc := range queryConfigs {
+			qc.setError(err)
+		}
+		return err
 	})
 }
 

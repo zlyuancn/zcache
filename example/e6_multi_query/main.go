@@ -30,6 +30,7 @@ func main() {
 		zcache.NewQueryConfig().Args("world3"),
 		// 这里出现了重复的query, 我们在从缓存或加载器加载数据时会过滤掉这个query, 然后在返回数据给调用者时会将它按顺序返回
 		zcache.NewQueryConfig().Args("world1"),
+		zcache.NewQueryConfig().Args("world2"),
 	)
 
 	fmt.Println(results)

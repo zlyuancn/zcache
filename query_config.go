@@ -19,6 +19,7 @@ type QueryConfig struct {
 	args   interface{}
 	meta   interface{}
 	loader core.ILoader
+	err    error
 }
 
 // 创建一个查询配置
@@ -52,6 +53,15 @@ func (m *QueryConfig) Loader(loader core.ILoader) *QueryConfig {
 func (m *QueryConfig) LoaderFn(fn loader.LoaderFn, opts ...loader.Option) *QueryConfig {
 	m.loader = loader.NewLoader(fn, opts...)
 	return m
+}
+
+// 获取错误, 查询出错时还可以在这里获取到错误信息
+func (m *QueryConfig) GetErr() error {
+	return m.err
+}
+
+func (m *QueryConfig) setError(err error) {
+	m.err = err
 }
 
 // 构建 query

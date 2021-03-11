@@ -32,6 +32,8 @@ type Query struct {
 	meta interface{}
 
 	loader core.ILoader
+
+	err error
 }
 
 // 创建一个查询
@@ -83,4 +85,12 @@ func (q *Query) GlobalId() uint64 {
 
 func (q *Query) Loader() core.ILoader {
 	return q.loader
+}
+
+func (q *Query) Err() error {
+	return q.err
+}
+
+func (q *Query) SetError(err error) {
+	q.err = err
 }

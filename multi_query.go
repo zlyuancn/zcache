@@ -33,7 +33,15 @@ func (c *Cache) MQueryWithContext(ctx context.Context, bucket string, a interfac
 		queries[i] = config.Bucket(bucket).Make()
 	}
 	return c.doWithContext(ctx, func() error {
-		return c.mQuery(queries, a)
+		err := c.mQuery(queries, a)
+		if err == nil {
+			return nil
+		}
+
+		for i, qc := range queryConfigs {
+			qc.setError(queries[i].Err())
+		}
+		return err
 	})
 }
 
@@ -74,9 +82,9 @@ func (c *Cache) mQuery(queries []core.IQuery, a interface{}) error {
 
 		q := realQueries[i]
 		if cacheErr != errs.CacheMiss { // 非缓存未命中错误
-			if c.directReturnOnCacheFault { // 直接报告错误
-				cacheErr = fmt.Errorf("load from cache error. query: %s, args: %s, err: %s", q.Bucket(), q.ArgsText(), cacheErr)
-				return cacheErr
+			if c.directReturnOnCacheFault { // 直接报告错误(不从加载器获取数据了)
+				q.SetError(cacheErr)
+				continue
 			}
 			cacheErr = fmt.Errorf("load from cache error, The data will be fetched from the loader. query: %s, args: %s, err: %s", q.Bucket(), q.ArgsText(), cacheErr)
 			c.log.Error(cacheErr)
@@ -85,7 +93,8 @@ func (c *Cache) mQuery(queries []core.IQuery, a interface{}) error {
 		// 从加载器获取数据
 		bs, err := c.sf.Do(q, c.load)
 		if err != nil {
-			return err
+			q.SetError(err)
+			continue
 		}
 
 		buffs[i] = bs
@@ -103,7 +112,9 @@ func (c *Cache) mQuery(queries []core.IQuery, a interface{}) error {
 	}
 	realBuffs := make([][]byte, len(queries))
 	for i, q := range queries {
-		realBuffs[i] = buffs[idMap[q.GlobalId()]]
+		index := idMap[q.GlobalId()]
+		realBuffs[i] = buffs[index]
+		q.SetError(realQueries[index].Err()) // 如果有重复的 query 出错, 为重复的那个query设置err
 	}
 
 	return c.writeBuffsTo(queries, realBuffs, a)
@@ -132,7 +143,7 @@ func (c *Cache) writeBuffsTo(queries []core.IQuery, buffs [][]byte, a interface{
 }
 
 // 将批量获取的数据写入切片中
-func (c *Cache) writeBuffsToSlice(queries []core.IQuery, buffs [][]byte, sliceType reflect.Type, sliceValue reflect.Value) (err error) {
+func (c *Cache) writeBuffsToSlice(queries []core.IQuery, buffs [][]byte, sliceType reflect.Type, sliceValue reflect.Value) error {
 	if sliceValue.Kind() == reflect.Invalid {
 		panic(errors.New("A is invalid"))
 	}
@@ -146,13 +157,17 @@ func (c *Cache) writeBuffsToSlice(queries []core.IQuery, buffs [][]byte, sliceTy
 		itemType = itemType.Elem() // 获取指针指向的真正的内容类型
 	}
 
+	err := errs.NewErrors()
 	items := make([]reflect.Value, len(buffs))
 	for i, bs := range buffs {
 		child := reflect.New(itemType) // 创建一个相同类型的指针
-		if err = c.unmarshal(bs, child.Interface()); err != nil {
-			q := queries[i]
-			return fmt.Errorf("unmarshal error. query: %s, args: %s, err: %s", q.Bucket(), q.ArgsText(), err)
+		if queries[i].Err() == nil {
+			if e := c.unmarshal(bs, child.Interface()); e != nil {
+				queries[i].SetError(e)
+				err.AddErr(e)
+			}
 		}
+		err.AddErr(queries[i].Err())
 
 		if !itemIsPtr {
 			child = child.Elem() // 如果想要的不是指针那么获取它的内容
@@ -162,11 +177,11 @@ func (c *Cache) writeBuffsToSlice(queries []core.IQuery, buffs [][]byte, sliceTy
 
 	values := reflect.Append(sliceValue, items...) // 构建内容切片
 	sliceValue.Set(values)                         // 将内容切片写入原始切片中
-	return nil
+	return err.Err()
 }
 
 // 将批量获取的数据写入数组中
-func (c *Cache) writeBuffsToArray(queries []core.IQuery, buffs [][]byte, arrayType reflect.Type, arrayValue reflect.Value) (err error) {
+func (c *Cache) writeBuffsToArray(queries []core.IQuery, buffs [][]byte, arrayType reflect.Type, arrayValue reflect.Value) error {
 	if arrayValue.Kind() == reflect.Invalid {
 		panic(errors.New("A is invalid"))
 	}
@@ -180,17 +195,21 @@ func (c *Cache) writeBuffsToArray(queries []core.IQuery, buffs [][]byte, arrayTy
 		itemType = itemType.Elem() // 获取指针指向的真正的内容类型
 	}
 
+	err := errs.NewErrors()
 	for i, bs := range buffs {
 		child := reflect.New(itemType) // 创建一个相同类型的指针
-		if err = c.unmarshal(bs, child.Interface()); err != nil {
-			q := queries[i]
-			return fmt.Errorf("unmarshal error. query: %s, args: %s, err: %s", q.Bucket(), q.ArgsText(), err)
+		if queries[i].Err() == nil {
+			if e := c.unmarshal(bs, child.Interface()); e != nil {
+				queries[i].SetError(e)
+				err.AddErr(e)
+			}
 		}
+		err.AddErr(queries[i].Err())
 
 		if !itemIsPtr {
 			child = child.Elem() // 如果想要的不是指针那么获取它的内容
 		}
 		arrayValue.Index(i).Set(child)
 	}
-	return nil
+	return err.Err()
 }

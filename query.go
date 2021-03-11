@@ -14,7 +14,6 @@ import (
 
 	"github.com/zlyuancn/zcache/core"
 	"github.com/zlyuancn/zcache/errs"
-	"github.com/zlyuancn/zcache/query"
 	"github.com/zlyuancn/zcache/wrap_call"
 )
 
@@ -34,7 +33,9 @@ func (c *Cache) Get(query core.IQuery, a interface{}) error {
 // 获取数据
 func (c *Cache) GetWithContext(ctx context.Context, query core.IQuery, a interface{}) error {
 	return c.doWithContext(ctx, func() error {
-		return c.get(query, a)
+		err := c.get(query, a)
+		query.SetError(err)
+		return err
 	})
 }
 func (c *Cache) get(query core.IQuery, a interface{}) error {
@@ -45,7 +46,7 @@ func (c *Cache) get(query core.IQuery, a interface{}) error {
 	}
 	if cacheErr != errs.CacheMiss { // 非缓存未命中错误
 		if c.directReturnOnCacheFault { // 直接报告错误
-			cacheErr = fmt.Errorf("load from cache error. query: %s, args: %s, err: %s", query.Bucket(), query.ArgsText(), cacheErr)
+			cacheErr = fmt.Errorf("load from cache error: %s", cacheErr)
 			return cacheErr
 		}
 		cacheErr = fmt.Errorf("load from cache error, The data will be fetched from the loader. query: %s, args: %s, err: %s", query.Bucket(), query.ArgsText(), cacheErr)
@@ -70,14 +71,19 @@ func (c *Cache) Query(bucket string, a interface{}, queryConfig ...*QueryConfig)
 
 // 获取数据
 func (c *Cache) QueryWithContext(ctx context.Context, bucket string, a interface{}, queryConfig ...*QueryConfig) error {
-	var q core.IQuery
+	var query core.IQuery
 	if len(queryConfig) > 0 {
-		q = queryConfig[0].Bucket(bucket).Make()
+		query = queryConfig[0].Bucket(bucket).Make()
 	} else {
-		q = query.NewQuery(bucket)
+		query = NewQuery(bucket)
 	}
 	return c.doWithContext(ctx, func() error {
-		return c.get(q, a)
+		err := c.get(query, a)
+		query.SetError(err)
+		if len(queryConfig) > 0 {
+			queryConfig[0].setError(err)
+		}
+		return err
 	})
 }
 
@@ -96,7 +102,7 @@ func (c *Cache) load(query core.IQuery) (bs []byte, err error) {
 		// 加载数据
 		result, err := l.Load(query)
 		if err != nil {
-			return fmt.Errorf("load data error from loader. query: %s, args: %s, err: %s", query.Bucket(), query.ArgsText(), err)
+			return fmt.Errorf("load data error from loader: %s", err)
 		}
 
 		// 编码
@@ -108,7 +114,7 @@ func (c *Cache) load(query core.IQuery) (bs []byte, err error) {
 		// 写入缓存
 		cacheErr := c.cache.Set(query, bs, c.makeExpire(l.Expire()))
 		if cacheErr != nil {
-			cacheErr = fmt.Errorf("write to cache error. query: %s, args: %s, err: %s", query.Bucket(), query.ArgsText(), cacheErr)
+			cacheErr = fmt.Errorf("write to cache error: %s", cacheErr)
 			if c.directReturnOnCacheFault {
 				return cacheErr
 			}

@@ -24,4 +24,9 @@ type IQuery interface {
 
 	// 查询加载器, 缓存未命中时优先使用这个加载器生成数据
 	Loader() ILoader
+
+	// 获取错误, 查询出错时还可以在这里获取到错误信息
+	Err() error
+	// 设置错误
+	SetError(err error)
 }

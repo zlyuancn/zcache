@@ -29,10 +29,12 @@ func NewErrors(errs ...error) *Errors {
 
 // 转为error
 func (e *Errors) Err() error {
-	if len(e.errs) == 0 {
-		return nil
+	for _, err := range e.errs {
+		if err != nil {
+			return e
+		}
 	}
-	return e
+	return nil
 }
 
 // 返回第一个error
@@ -59,11 +61,13 @@ func (e *Errors) AddErr(errs ...error) {
 }
 
 func (e *Errors) String() string {
-	if len(e.errs) == 0 {
-		return "<nil>"
+	for _, err := range e.errs {
+		if err != nil {
+			return err.Error()
+		}
 	}
 
-	return e.errs[0].Error()
+	return "<nil>"
 }
 
 // 格式化输出
@@ -81,9 +85,9 @@ func (e *Errors) Format(s fmt.State, verb rune) {
 	case 'v':
 		var f string
 		if s.Flag('+') {
-			f = "%d: %+v\n"
+			f = "   %d: %+v\n"
 		} else {
-			f = "%d: %v\n"
+			f = "   %d: %v\n"
 		}
 
 		var bs bytes.Buffer

@@ -137,7 +137,7 @@ func testMemoryCacheDel(t *testing.T, cache *zcache.Cache) {
 		require.NoError(t, err)
 		require.Equal(t, result, expect)
 
-		err = cache.Del(q)
+		err = cache.Remove(q)
 		require.NoError(t, err)
 
 		result = ""
