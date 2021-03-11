@@ -15,7 +15,6 @@ import (
 )
 
 type QueryConfig struct {
-	bucket string
 	args   interface{}
 	meta   interface{}
 	loader core.ILoader
@@ -24,12 +23,6 @@ type QueryConfig struct {
 
 // 创建一个查询配置
 func NewQueryConfig() *QueryConfig { return &QueryConfig{} }
-
-// 设置 bucket
-func (m *QueryConfig) Bucket(bucket string) *QueryConfig {
-	m.bucket = bucket
-	return m
-}
 
 // 设置参数, 同 query.WithArgs
 func (m *QueryConfig) Args(args interface{}) *QueryConfig {
@@ -64,11 +57,15 @@ func (m *QueryConfig) setError(err error) {
 	m.err = err
 }
 
-// 构建 query
-func (m *QueryConfig) Make() core.IQuery {
-	return NewQuery(m.bucket,
-		query.WithArgs(m.args),
-		query.WithMeta(m.meta),
-		query.WithLoader(m.loader),
-	)
+// 创建一个查询
+func NewQuery(bucket string, queryConfig ...*QueryConfig) core.IQuery {
+	if len(queryConfig) > 0 {
+		qc := queryConfig[0]
+		return query.NewQuery(bucket,
+			query.WithArgs(qc.args),
+			query.WithMeta(qc.meta),
+			query.WithLoader(qc.loader),
+		)
+	}
+	return query.NewQuery(bucket)
 }

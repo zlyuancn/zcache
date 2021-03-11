@@ -23,8 +23,8 @@ var (
 )
 
 var (
-	// 创建一个查询
-	NewQuery = query.NewQuery
+	// 根据选项创建一个查询
+	NewQueryWithOption = query.NewQuery
 	// 设置查询参数
 	WithQueryArgs = query.WithArgs
 	// 设置查询元数据

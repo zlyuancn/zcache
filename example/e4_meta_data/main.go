@@ -22,9 +22,9 @@ func main() {
 	})
 
 	// 创建三个请求参数
-	q1 := zcache.NewQuery("test", zcache.WithQueryMeta("world"))
-	q2 := zcache.NewQuery("test", zcache.WithQueryMeta("world2"))
-	q3 := zcache.NewQueryConfig().Bucket("test").Meta("world3").Make() // 等效于 NewQuery
+	q1 := zcache.NewQuery("test", zcache.NewQueryConfig().Meta("world"))
+	q2 := zcache.NewQuery("test", zcache.NewQueryConfig().Meta("world2"))
+	q3 := zcache.NewQueryWithOption("test", zcache.WithQueryMeta("world3")) // 等效于 NewQuery
 
 	// 元数据不会参与 GlobalId 计算, 所以后两次请求是从缓存获取的而不是从加载器重新加载.
 	fmt.Println("q1.GlobalId", q1.GlobalId())

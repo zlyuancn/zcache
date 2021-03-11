@@ -63,20 +63,13 @@ func (c *Cache) get(query core.IQuery, a interface{}) error {
 }
 
 // 获取数据
-//
-// QueryConfig 的 bucket 会被替换传入的 bucket
 func (c *Cache) Query(bucket string, a interface{}, queryConfig ...*QueryConfig) error {
 	return c.QueryWithContext(nil, bucket, a, queryConfig...)
 }
 
 // 获取数据
 func (c *Cache) QueryWithContext(ctx context.Context, bucket string, a interface{}, queryConfig ...*QueryConfig) error {
-	var query core.IQuery
-	if len(queryConfig) > 0 {
-		query = queryConfig[0].Bucket(bucket).Make()
-	} else {
-		query = NewQuery(bucket)
-	}
+	query := NewQuery(bucket, queryConfig...)
 	return c.doWithContext(ctx, func() error {
 		err := c.get(query, a)
 		query.SetError(err)

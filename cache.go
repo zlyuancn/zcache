@@ -133,12 +133,7 @@ func (c *Cache) Save(bucket string, a interface{}, ex time.Duration, queryConfig
 
 // 保存一条数据到缓存
 func (c *Cache) SaveWithContext(ctx context.Context, bucket string, a interface{}, ex time.Duration, queryConfig ...*QueryConfig) error {
-	var query core.IQuery
-	if len(queryConfig) > 0 {
-		query = queryConfig[0].Bucket(bucket).Make()
-	} else {
-		query = NewQuery(bucket)
-	}
+	query := NewQuery(bucket, queryConfig...)
 	return c.doWithContext(ctx, func() error {
 		return c.set(query, a, ex)
 	})
@@ -177,8 +172,8 @@ func (c *Cache) DelWithContext(ctx context.Context, bucket string, queryConfigs 
 		return nil
 	}
 	queries := make([]core.IQuery, len(queryConfigs))
-	for i, config := range queryConfigs {
-		queries[i] = config.Bucket(bucket).Make()
+	for i, qc := range queryConfigs {
+		queries[i] = NewQuery(bucket, qc)
 	}
 	return c.doWithContext(ctx, func() error {
 		err := c.cache.Del(queries...)

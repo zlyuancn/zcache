@@ -25,12 +25,11 @@ func (c *Cache) MQuery(bucket string, a interface{}, queryConfigs ...*QueryConfi
 
 // 批量获取, a必须是长度为0的切片指针或长度等于请求数的数组指针
 //
-// QueryConfig 的 bucket 会被替换传入的 bucket
 // 如果有重复的query我们会进行优化, 在从缓存或加载器加载数据时会过滤掉这个query, 然后在返回数据给调用者时会将它按顺序返回
 func (c *Cache) MQueryWithContext(ctx context.Context, bucket string, a interface{}, queryConfigs ...*QueryConfig) error {
 	queries := make([]core.IQuery, len(queryConfigs))
-	for i, config := range queryConfigs {
-		queries[i] = config.Bucket(bucket).Make()
+	for i, qc := range queryConfigs {
+		queries[i] = NewQuery(bucket, qc)
 	}
 	return c.doWithContext(ctx, func() error {
 		err := c.mQuery(queries, a)

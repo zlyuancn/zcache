@@ -93,7 +93,7 @@ func testMemoryCacheGet(t *testing.T, cache *zcache.Cache) {
 		k := fmt.Sprintf("k%d", i)
 		v := fmt.Sprintf("v%d", i)
 
-		q := zcache.NewQuery(bucket, zcache.WithQueryArgs([]interface{}{k, v}))
+		q := zcache.NewQuery(bucket, zcache.NewQueryConfig().Args([]interface{}{k, v}))
 		expect := fmt.Sprintf("%s?%d", q.ArgsText(), q.GlobalId())
 
 		var result string
@@ -109,7 +109,7 @@ func testMemoryCacheSet(t *testing.T, cache *zcache.Cache) {
 		k := fmt.Sprintf("k%d", i)
 		v := fmt.Sprintf("v%d", i)
 
-		q := zcache.NewQuery(bucket, zcache.WithQueryArgs([]interface{}{k, v}))
+		q := zcache.NewQuery(bucket, zcache.NewQueryConfig().Args([]interface{}{k, v}))
 		expect := fmt.Sprintf("%s?%d", q.ArgsText(), q.GlobalId())
 		err := cache.Set(q, expect)
 		require.NoError(t, err)
@@ -127,7 +127,7 @@ func testMemoryCacheDel(t *testing.T, cache *zcache.Cache) {
 		k := fmt.Sprintf("k%d", i)
 		v := fmt.Sprintf("v%d", i)
 
-		q := zcache.NewQuery(bucket, zcache.WithQueryArgs([]interface{}{k, v}))
+		q := zcache.NewQuery(bucket, zcache.NewQueryConfig().Args([]interface{}{k, v}))
 		expect := fmt.Sprintf("%s?%d", q.ArgsText(), q.GlobalId())
 		err := cache.Set(q, expect)
 		require.NoError(t, err)
@@ -152,7 +152,7 @@ func testMemoryCacheDelBucket(t *testing.T, cache *zcache.Cache) {
 		k := fmt.Sprintf("k%d", i)
 		v := fmt.Sprintf("v%d", i)
 
-		q := zcache.NewQuery(bucket, zcache.WithQueryArgs([]interface{}{k, v}))
+		q := zcache.NewQuery(bucket, zcache.NewQueryConfig().Args([]interface{}{k, v}))
 		expect := fmt.Sprintf("%s?%d", q.ArgsText(), q.GlobalId())
 		err := cache.Set(q, expect)
 		require.NoError(t, err)
@@ -170,7 +170,7 @@ func testMemoryCacheDelBucket(t *testing.T, cache *zcache.Cache) {
 		k := fmt.Sprintf("k%d", i)
 		v := fmt.Sprintf("v%d", i)
 
-		q := zcache.NewQuery(bucket, zcache.WithQueryArgs([]interface{}{k, v}))
+		q := zcache.NewQuery(bucket, zcache.NewQueryConfig().Args([]interface{}{k, v}))
 
 		var result string
 		err = cache.Get(q, &result)
@@ -200,7 +200,7 @@ func benchmarkAny(b *testing.B, cache *zcache.Cache, maxKeyCount int) {
 		}
 		expects[i] = bs
 
-		q := zcache.NewQuery(bucket, zcache.WithQueryArgs(i))
+		q := zcache.NewQuery(bucket, zcache.NewQueryConfig().Args([]interface{}{i}))
 		err := cache.Set(q, bs)
 		require.NoError(b, err, "数据设置失败")
 	}
@@ -217,7 +217,7 @@ func benchmarkAny(b *testing.B, cache *zcache.Cache, maxKeyCount int) {
 		for p.Next() {
 			i++
 			k := randKeys[i&(len(randKeys)-1)]
-			q := zcache.NewQuery(bucket, zcache.WithQueryArgs(k))
+			q := zcache.NewQuery(bucket, zcache.NewQueryConfig().Args([]interface{}{k}))
 
 			var bs []byte
 			err := cache.Get(q, &bs)
