@@ -160,13 +160,12 @@ func (c *Cache) writeBuffsToSlice(queries []core.IQuery, buffs [][]byte, sliceTy
 	items := make([]reflect.Value, len(buffs))
 	for i, bs := range buffs {
 		child := reflect.New(itemType) // 创建一个相同类型的指针
-		if queries[i].Err() == nil {
-			if e := c.unmarshal(bs, child.Interface()); e != nil {
-				queries[i].SetError(e)
-				err.AddErr(e)
-			}
+		e := queries[i].Err()
+		if e == nil {
+			e = c.unmarshal(bs, child.Interface())
 		}
-		err.AddErr(queries[i].Err())
+		queries[i].SetError(e)
+		err.AddErr(e)
 
 		if !itemIsPtr {
 			child = child.Elem() // 如果想要的不是指针那么获取它的内容
@@ -197,13 +196,12 @@ func (c *Cache) writeBuffsToArray(queries []core.IQuery, buffs [][]byte, arrayTy
 	err := errs.NewErrors()
 	for i, bs := range buffs {
 		child := reflect.New(itemType) // 创建一个相同类型的指针
-		if queries[i].Err() == nil {
-			if e := c.unmarshal(bs, child.Interface()); e != nil {
-				queries[i].SetError(e)
-				err.AddErr(e)
-			}
+		e := queries[i].Err()
+		if e == nil {
+			e = c.unmarshal(bs, child.Interface())
 		}
-		err.AddErr(queries[i].Err())
+		queries[i].SetError(e)
+		err.AddErr(e)
 
 		if !itemIsPtr {
 			child = child.Elem() // 如果想要的不是指针那么获取它的内容
